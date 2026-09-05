@@ -1,12 +1,13 @@
 import '../../core/enums/payment_method.dart';
 import '../../core/enums/transaction_type.dart';
+import '../../core/base/value_equality.dart';
 
 /// A single ledger entry.
 ///
 /// Named `MoneyTransaction` to avoid colliding with sqflite's `Transaction`.
 /// [categoryName], [accountName] and their display fields are denormalised by
 /// the DAO's join so lists render without an N+1 lookup per row.
-class MoneyTransaction {
+class MoneyTransaction with ValueEquality {
   const MoneyTransaction({
     required this.id,
     required this.accountId,
@@ -115,8 +116,25 @@ class MoneyTransaction {
   );
 
   @override
-  bool operator ==(Object other) => other is MoneyTransaction && other.id == id;
-
-  @override
-  int get hashCode => id.hashCode;
+  List<Object?> get props => [
+    id,
+    accountId,
+    toAccountId,
+    type,
+    amount,
+    categoryId,
+    title,
+    description,
+    transactionDate,
+    paymentMethod,
+    note,
+    recurringId,
+    createdAt,
+    updatedAt,
+    categoryName,
+    categoryIcon,
+    categoryColor,
+    accountName,
+    toAccountName,
+  ];
 }

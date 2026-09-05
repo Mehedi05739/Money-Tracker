@@ -1,6 +1,7 @@
 import '../../core/enums/transaction_type.dart';
+import '../../core/base/value_equality.dart';
 
-class Category {
+class Category with ValueEquality {
   const Category({
     required this.id,
     required this.name,
@@ -46,8 +47,14 @@ class Category {
   );
 
   @override
-  bool operator ==(Object other) => other is Category && other.id == id;
-
-  @override
-  int get hashCode => id.hashCode;
+  List<Object?> get props => [
+    id,
+    name,
+    type,
+    icon,
+    color,
+    isDefault,
+    isArchived,
+    createdAt,
+  ];
 }

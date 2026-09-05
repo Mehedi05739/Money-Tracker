@@ -1,3 +1,5 @@
+import 'package:get/get.dart';
+
 import '../../core/errors/failures.dart';
 import '../../core/utils/result.dart';
 import '../../core/utils/validators.dart';
@@ -57,52 +59,93 @@ class GoalRepositoryImpl implements GoalRepository {
   Future<Result<FinancialGoal>> addContribution(
     GoalContribution contribution,
   ) async {
-    if (contribution.amount == 0) {
-      return const Result.error(
-        ValidationFailure(
-          'Enter an amount',
-          fieldErrors: {'amount': 'Amount must not be zero'},
-        ),
-      );
-    }
-    if (contribution.amount.abs() > Validators.maxAmount) {
-      return const Result.error(
-        ValidationFailure(
-          'Amount is too large',
-          fieldErrors: {'amount': 'Too large'},
-        ),
-      );
-    }
+    final invalid = _validateContribution(contribution);
+    if (invalid != null) return Result.error(invalid);
 
-    // A withdrawal cannot take the goal below zero.
-    if (contribution.amount < 0) {
-      final goal = await getById(contribution.goalId);
-      if (goal case Failed(:final failure)) return Result.error(failure);
-      if (goal case Success(:final data)
-          when data.currentAmount + contribution.amount < 0) {
-        return Result.error(
-          ValidationFailure(
-            'You can withdraw at most ${data.currentAmount.toStringAsFixed(2)}',
-            fieldErrors: const {'amount': 'More than the goal holds'},
-          ),
-        );
-      }
-    }
+    final overdraw = await _checkWithdrawal(contribution);
+    if (overdraw != null) return Result.error(overdraw);
 
     return guardFound(
       () => _dao.addContribution(
-        GoalContribution(
-          id: contribution.id,
-          goalId: contribution.goalId,
-          accountId: contribution.accountId,
+        contribution.copyWith(
           amount: Validators.normalizeAmount(contribution.amount),
-          contributedAt: contribution.contributedAt,
-          note: contribution.note,
-          createdAt: contribution.createdAt,
         ),
       ),
       notFoundMessage: 'Goal not found',
       context: 'addContribution',
+    );
+  }
+
+  Failure? _validateContribution(GoalContribution contribution) {
+    if (contribution.amount == 0) {
+      return const ValidationFailure(
+        'Enter an amount',
+        fieldErrors: {'amount': 'Amount must not be zero'},
+      );
+    }
+    if (contribution.amount.abs() > Validators.maxAmount) {
+      return const ValidationFailure(
+        'Amount is too large',
+        fieldErrors: {'amount': 'Too large'},
+      );
+    }
+    return null;
+  }
+
+  /// A withdrawal cannot take a goal below zero.
+  ///
+  /// When editing, the contribution's own stored amount is removed from the
+  /// total first — otherwise changing a withdrawal from -50 to -60 would be
+  /// measured against a total that still includes the original -50.
+  Future<Failure?> _checkWithdrawal(
+    GoalContribution contribution, {
+    bool excludeSelf = false,
+  }) async {
+    if (contribution.amount >= 0) return null;
+
+    final goal = await getById(contribution.goalId);
+    if (goal case Failed(:final failure)) return failure;
+    if (goal case Success(:final data)) {
+      var available = data.currentAmount;
+
+      if (excludeSelf) {
+        final existing = await getContributions(contribution.goalId);
+        final previous = existing.dataOrNull?.firstWhereOrNull(
+          (item) => item.id == contribution.id,
+        );
+        if (previous != null) available -= previous.amount;
+      }
+
+      if (available + contribution.amount < 0) {
+        return ValidationFailure(
+          'You can withdraw at most ${available.toStringAsFixed(2)}',
+          fieldErrors: const {'amount': 'More than the goal holds'},
+        );
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<Result<FinancialGoal>> updateContribution(
+    GoalContribution contribution,
+  ) async {
+    final invalid = _validateContribution(contribution);
+    if (invalid != null) return Result.error(invalid);
+
+    // A withdrawal must not take the goal below zero once re-applied, so the
+    // check is against the total excluding this contribution's old value.
+    final overdraw = await _checkWithdrawal(contribution, excludeSelf: true);
+    if (overdraw != null) return Result.error(overdraw);
+
+    return guardFound(
+      () => _dao.updateContribution(
+        contribution.copyWith(
+          amount: Validators.normalizeAmount(contribution.amount),
+        ),
+      ),
+      notFoundMessage: 'Contribution not found',
+      context: 'updateContribution',
     );
   }
 

@@ -13,5 +13,11 @@ abstract class GoalRepository {
   /// Records a contribution and rolls `current_amount` forward atomically,
   /// marking the goal achieved once the target is met.
   Future<Result<FinancialGoal>> addContribution(GoalContribution contribution);
+
+  /// Changes an existing contribution and recomputes the goal's total.
+  Future<Result<FinancialGoal>> updateContribution(
+    GoalContribution contribution,
+  );
+
   Future<Result<FinancialGoal>> deleteContribution(int contributionId);
 }

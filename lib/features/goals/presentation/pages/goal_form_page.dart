@@ -161,8 +161,8 @@ class GoalFormPage extends GetView<GoalFormController> {
                 AppSpacing.gapBase,
                 AppTextField(
                   controller: controller.noteField,
-                  label: 'Note',
-                  hint: 'Optional',
+                  label: 'Description',
+                  hint: 'What is this goal for?',
                   maxLines: 3,
                   maxLength: 240,
                 ),

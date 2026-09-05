@@ -99,6 +99,39 @@ class GoalDetailController extends BaseController {
     );
   }
 
+  /// Rewrites an existing contribution; the goal total follows automatically.
+  Future<bool> editContribution(
+    GoalContribution contribution, {
+    required double amount,
+    Account? account,
+    String? note,
+  }) async {
+    isSaving.value = true;
+    final result = await _repository.updateContribution(
+      contribution.copyWith(
+        amount: Validators.normalizeAmount(amount),
+        accountId: account?.id,
+        clearAccount: account == null,
+        note: note,
+        clearNote: note == null,
+      ),
+    );
+    isSaving.value = false;
+
+    return result.fold(
+      onSuccess: (_) {
+        _events.emit(DataChange.goals);
+        AppSnackbar.success('Contribution updated');
+        load(showLoader: false);
+        return true;
+      },
+      onError: (failure) {
+        AppSnackbar.error(failure.message);
+        return false;
+      },
+    );
+  }
+
   Future<void> removeContribution(GoalContribution contribution) async {
     final result = await _repository.deleteContribution(contribution.id);
     result.fold(

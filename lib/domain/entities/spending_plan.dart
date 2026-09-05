@@ -1,7 +1,8 @@
 import '../../core/enums/plan_status.dart';
 import '../../core/utils/date_range.dart';
+import '../../core/base/value_equality.dart';
 
-class SpendingPlan {
+class SpendingPlan with ValueEquality {
   const SpendingPlan({
     required this.id,
     required this.name,
@@ -75,13 +76,20 @@ class SpendingPlan {
   );
 
   @override
-  bool operator ==(Object other) => other is SpendingPlan && other.id == id;
-
-  @override
-  int get hashCode => id.hashCode;
+  List<Object?> get props => [
+    id,
+    name,
+    expectedIncome,
+    startDate,
+    endDate,
+    status,
+    note,
+    createdAt,
+    updatedAt,
+  ];
 }
 
-class SpendingPlanItem {
+class SpendingPlanItem with ValueEquality {
   const SpendingPlanItem({
     required this.id,
     required this.planId,
@@ -131,8 +139,16 @@ class SpendingPlanItem {
   );
 
   @override
-  bool operator ==(Object other) => other is SpendingPlanItem && other.id == id;
-
-  @override
-  int get hashCode => id.hashCode;
+  List<Object?> get props => [
+    id,
+    planId,
+    categoryId,
+    plannedAmount,
+    note,
+    createdAt,
+    updatedAt,
+    categoryName,
+    categoryIcon,
+    categoryColor,
+  ];
 }

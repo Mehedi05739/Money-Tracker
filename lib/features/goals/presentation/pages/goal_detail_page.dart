@@ -156,10 +156,8 @@ class _DetailBody extends StatelessWidget {
                       ),
                       Expanded(
                         child: _Metric(
-                          label: 'Target date',
-                          value: goal.targetDate == null
-                              ? '—'
-                              : AppDate.formatDate(goal.targetDate!),
+                          label: 'Time left',
+                          value: goal.timeToTarget ?? '—',
                         ),
                       ),
                     ],
@@ -173,12 +171,40 @@ class _DetailBody extends StatelessWidget {
                         color: color.withValues(alpha: 0.09),
                         borderRadius: AppRadius.mdAll,
                       ),
-                      child: Text(
-                        'Set aside '
-                        '${Money.format(goal.requiredMonthlyContribution!)} '
-                        'each month to reach this goal on time.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall,
+                      // Two rates, because people save on different rhythms —
+                      // a monthly salary or a weekly envelope.
+                      child: Column(
+                        children: [
+                          Text(
+                            'To reach this by '
+                            '${AppDate.formatDate(goal.targetDate!)}',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          AppSpacing.gapSm,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _Metric(
+                                  label: 'Per month',
+                                  value: Money.format(
+                                    goal.requiredMonthlyContribution!,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: _Metric(
+                                  label: 'Per week',
+                                  value: Money.format(
+                                    goal.requiredWeeklyContribution ?? 0,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -278,6 +304,7 @@ class _ContributionTile extends StatelessWidget {
           color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
+      onTap: _edit,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -285,17 +312,36 @@ class _ContributionTile extends StatelessWidget {
             '${isWithdrawal ? '−' : '+'}${Money.format(contribution.amount.abs())}',
             style: theme.textTheme.titleSmall?.copyWith(color: color),
           ),
-          IconButton(
-            tooltip: 'Remove entry',
-            onPressed: _confirmRemove,
+          PopupMenuButton<String>(
             icon: Icon(
-              Icons.close_rounded,
+              Icons.more_vert_rounded,
               size: 18,
               color: theme.colorScheme.onSurfaceVariant,
             ),
+            onSelected: (action) =>
+                action == 'edit' ? _edit() : _confirmRemove(),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'edit', child: Text('Edit')),
+              PopupMenuItem(value: 'remove', child: Text('Remove')),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _edit() async {
+    final result = await _ContributionSheet.show(
+      accounts: controller.accounts,
+      existing: contribution,
+    );
+    if (result == null) return;
+
+    await controller.editContribution(
+      contribution,
+      amount: result.amount,
+      account: result.account,
+      note: result.note,
     );
   }
 
@@ -339,12 +385,16 @@ class _Metric extends StatelessWidget {
 /// Contribution entry sheet. Supports withdrawals so a goal can be corrected
 /// without deleting history.
 class _ContributionSheet extends StatefulWidget {
-  const _ContributionSheet({required this.accounts});
+  const _ContributionSheet({required this.accounts, this.existing});
 
   final List<Account> accounts;
 
+  /// When set the sheet edits this contribution instead of adding one.
+  final GoalContribution? existing;
+
   static Future<({double amount, Account? account, String? note})?> show({
     required List<Account> accounts,
+    GoalContribution? existing,
   }) {
     final context = Get.context;
     if (context == null) return Future.value();
@@ -354,7 +404,8 @@ class _ContributionSheet extends StatefulWidget {
     >(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _ContributionSheet(accounts: accounts),
+      builder: (_) =>
+          _ContributionSheet(accounts: accounts, existing: existing),
     );
   }
 
@@ -368,6 +419,24 @@ class _ContributionSheetState extends State<_ContributionSheet> {
   Account? _account;
   bool _isWithdrawal = false;
   String? _error;
+
+  bool get _isEditing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    if (existing == null) return;
+
+    // A withdrawal is stored as a negative amount; the field shows its
+    // magnitude and the switch carries the sign.
+    _amount.text = existing.amount.abs().toStringAsFixed(2);
+    _note.text = existing.note ?? '';
+    _isWithdrawal = existing.isWithdrawal;
+    _account = widget.accounts.firstWhereOrNull(
+      (account) => account.id == existing.accountId,
+    );
+  }
 
   @override
   void dispose() {
@@ -405,7 +474,11 @@ class _ContributionSheetState extends State<_ContributionSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _isWithdrawal ? 'Withdraw from goal' : 'Add contribution',
+                _isEditing
+                    ? 'Edit entry'
+                    : _isWithdrawal
+                    ? 'Withdraw from goal'
+                    : 'Add contribution',
                 style: theme.textTheme.titleLarge,
               ),
               AppSpacing.gapBase,
@@ -445,7 +518,13 @@ class _ContributionSheetState extends State<_ContributionSheet> {
               AppSpacing.gapSm,
               FilledButton(
                 onPressed: _submit,
-                child: Text(_isWithdrawal ? 'Withdraw' : 'Add contribution'),
+                child: Text(
+                  _isEditing
+                      ? 'Save changes'
+                      : _isWithdrawal
+                      ? 'Withdraw'
+                      : 'Add contribution',
+                ),
               ),
             ],
           ),

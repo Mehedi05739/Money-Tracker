@@ -84,6 +84,29 @@ class GoalDao {
     });
   }
 
+  /// Rewrites a contribution and rolls the goal's total forward in one SQL
+  /// transaction.
+  ///
+  /// Editing an amount changes the goal's progress, so the two must move
+  /// together or the stored total silently disagrees with its own history.
+  Future<FinancialGoal?> updateContribution(GoalContribution contribution) {
+    return _db.transaction((txn) async {
+      final row = GoalContributionMapper.toRow(contribution)
+        ..remove(GoalContributionColumns.createdAt)
+        ..remove(GoalContributionColumns.goalId);
+
+      final updated = await txn.update(
+        Tables.goalContributions,
+        row,
+        where: '${GoalContributionColumns.id} = ?',
+        whereArgs: [contribution.id],
+      );
+      if (updated == 0) return null;
+
+      return _refreshTotal(txn, contribution.goalId);
+    });
+  }
+
   Future<FinancialGoal?> deleteContribution(int contributionId) {
     return _db.transaction((txn) async {
       final rows = await txn.query(

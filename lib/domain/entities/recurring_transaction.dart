@@ -2,9 +2,10 @@ import '../../core/enums/payment_method.dart';
 import '../../core/enums/recurrence_frequency.dart';
 import '../../core/enums/transaction_type.dart';
 import '../../core/utils/date_utils.dart';
+import '../../core/base/value_equality.dart';
 
 /// A template that materialises real transactions on a schedule.
-class RecurringTransaction {
+class RecurringTransaction with ValueEquality {
   const RecurringTransaction({
     required this.id,
     required this.accountId,
@@ -142,9 +143,28 @@ class RecurringTransaction {
   );
 
   @override
-  bool operator ==(Object other) =>
-      other is RecurringTransaction && other.id == id;
-
-  @override
-  int get hashCode => id.hashCode;
+  List<Object?> get props => [
+    id,
+    accountId,
+    categoryId,
+    type,
+    amount,
+    title,
+    note,
+    paymentMethod,
+    frequency,
+    intervalCount,
+    startDate,
+    endDate,
+    nextRunDate,
+    lastRunDate,
+    isActive,
+    autoPost,
+    createdAt,
+    updatedAt,
+    categoryName,
+    categoryIcon,
+    categoryColor,
+    accountName,
+  ];
 }

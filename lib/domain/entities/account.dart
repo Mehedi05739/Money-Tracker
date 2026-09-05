@@ -1,6 +1,7 @@
 import '../../core/enums/account_type.dart';
+import '../../core/base/value_equality.dart';
 
-class Account {
+class Account with ValueEquality {
   const Account({
     required this.id,
     required this.name,
@@ -74,8 +75,18 @@ class Account {
   );
 
   @override
-  bool operator ==(Object other) => other is Account && other.id == id;
-
-  @override
-  int get hashCode => id.hashCode;
+  List<Object?> get props => [
+    id,
+    name,
+    type,
+    openingBalance,
+    currentBalance,
+    currency,
+    icon,
+    color,
+    isArchived,
+    sortOrder,
+    createdAt,
+    updatedAt,
+  ];
 }

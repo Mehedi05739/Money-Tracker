@@ -229,6 +229,35 @@ Copying last month's plan writes the plan and every allocation in **one SQL
 transaction** — a half-copied plan would understate what the user had
 allocated, and they would have no way to notice.
 
+## Financial goals
+
+A goal stores only its own definition — name, target, target date, icon,
+colour, description, status. `current_amount` is **derived**: it is the sum of
+the rows in `goal_contributions`, never a number the user types. `GoalDao`
+recomputes it inside the same SQL transaction as every contribution write
+(`_refreshTotal`), so the stored total and the visible history can never
+disagree, and `GoalDao.update` strips `current_amount` from the edit form's row
+so editing a goal's name cannot silently rewrite its balance.
+
+Contributions are a separate table, kept as history: editing one rewrites that
+row rather than appending a correction, and deleting a goal cascades to its
+entries. A negative amount is a withdrawal; the repository rejects one that
+would take the goal below zero, measuring an *edit* against the total with the
+entry's own stored amount excluded so changing −50 to −60 is not checked
+against a sum that still contains the −50.
+
+`_refreshTotal` also moves the goal between `active` and `achieved` as the
+total crosses the target — including back to `active` when an edit drops it
+below — while leaving an `archived` goal archived.
+
+The pace figures come from the entity, not the UI:
+`requiredMonthlyContribution` and `requiredWeeklyContribution` divide what is
+left by the periods remaining, rounding the period count **up** — three-and-a-
+bit months to save in is three full months plus a part month, and recommending
+against the fractional figure would leave the user short. Both return `null`
+once the goal is achieved or its date has passed, which is what suppresses the
+hint rather than a widget-level check.
+
 ## Transactions
 
 **Search** covers title, note, description and category name. Category matching
@@ -267,7 +296,7 @@ refreshes goals alone; a recurring-schedule edit refreshes nothing, because
 posting one emits `DataChange.transactions` instead. Reloading every section on
 every event meant saving a goal re-queried the ledger.
 
-## Two GetX pitfalls this codebase works around
+## Three GetX pitfalls this codebase works around
 
 1. **`Get.back()` silently does nothing while a snackbar is open.** Its first
    statement is `if (isSnackbarOpen && !closeOverlays) { closeCurrentSnackbar();
@@ -280,6 +309,16 @@ every event meant saving a goal re-queried the ledger.
    Redefining those in an app-level extension makes every call site ambiguous,
    so `core/utils/extensions.dart` only adds names GetX does not already
    provide.
+3. **`Rx.value = x` skips the assignment when `x ==` the value already held.**
+   The domain entities originally compared on `id` alone, which reads as
+   harmless — two rows with the same primary key *are* the same record — but it
+   made that dedupe fire on every reload: after a goal contribution, `goal.value
+   = freshGoal` was dropped and the screen kept rendering the old balance while
+   the database held the new one. Entities now mix in
+   `core/base/value_equality.dart` and compare every field, so an unchanged row
+   still compares equal (identity lookups and dropdown matching keep working)
+   while a real change gets through. `test/domain/entity_equality_test.dart`
+   pins both halves.
 
 ## Dashboard
 

@@ -1,7 +1,8 @@
 import '../../core/enums/budget_period.dart';
 import '../../core/utils/date_range.dart';
+import '../../core/base/value_equality.dart';
 
-class Budget {
+class Budget with ValueEquality {
   const Budget({
     required this.id,
     required this.categoryId,
@@ -88,8 +89,19 @@ class Budget {
   );
 
   @override
-  bool operator ==(Object other) => other is Budget && other.id == id;
-
-  @override
-  int get hashCode => id.hashCode;
+  List<Object?> get props => [
+    id,
+    categoryId,
+    amount,
+    period,
+    startDate,
+    endDate,
+    alertPercentage,
+    isActive,
+    createdAt,
+    updatedAt,
+    categoryName,
+    categoryIcon,
+    categoryColor,
+  ];
 }
