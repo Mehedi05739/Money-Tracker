@@ -1,6 +1,7 @@
 import '../../core/enums/transaction_type.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/result.dart';
+import '../entities/analytics.dart';
 import '../entities/money_transaction.dart';
 
 /// Filter set for the transaction list. All fields are optional and combine
@@ -85,4 +86,94 @@ abstract class TransactionRepository {
   Future<Result<void>> delete(int id);
 
   Future<Result<List<MoneyTransaction>>> getRecent({int limit = 5});
+
+  // ---- Named queries ------------------------------------------------------
+  // Each composes onto [base] so a period query can still be narrowed by
+  // account, category or search without building a filter by hand.
+
+  Future<Result<List<MoneyTransaction>>> getToday({
+    TransactionFilter base = const TransactionFilter(),
+    int limit = 100,
+  });
+
+  Future<Result<List<MoneyTransaction>>> getThisWeek({
+    TransactionFilter base = const TransactionFilter(),
+    int limit = 100,
+  });
+
+  Future<Result<List<MoneyTransaction>>> getThisMonth({
+    TransactionFilter base = const TransactionFilter(),
+    int limit = 100,
+  });
+
+  Future<Result<List<MoneyTransaction>>> getByDateRange(
+    DateRange range, {
+    TransactionFilter base = const TransactionFilter(),
+    int limit = 100,
+    int offset = 0,
+  });
+
+  Future<Result<List<MoneyTransaction>>> getByCategory(
+    int categoryId, {
+    DateRange? range,
+    int limit = 100,
+    int offset = 0,
+  });
+
+  Future<Result<List<MoneyTransaction>>> getByAccount(
+    int accountId, {
+    DateRange? range,
+    int limit = 100,
+    int offset = 0,
+  });
+
+  Future<Result<List<MoneyTransaction>>> getIncome({
+    DateRange? range,
+    int limit = 100,
+    int offset = 0,
+  });
+
+  Future<Result<List<MoneyTransaction>>> getExpenses({
+    DateRange? range,
+    int limit = 100,
+    int offset = 0,
+  });
+
+  Future<Result<List<MoneyTransaction>>> getTransfers({
+    DateRange? range,
+    int limit = 100,
+    int offset = 0,
+  });
+
+  // ---- Aggregates ---------------------------------------------------------
+  // Computed by SQL. None of these return rows.
+
+  /// Income, expense, transfer and count for [filter] in a single query.
+  Future<Result<TransactionTotals>> getTotals([
+    TransactionFilter filter = const TransactionFilter(),
+  ]);
+
+  Future<Result<double>> getTotalIncome({
+    DateRange? range,
+    TransactionFilter base = const TransactionFilter(),
+  });
+
+  Future<Result<double>> getTotalExpenses({
+    DateRange? range,
+    TransactionFilter base = const TransactionFilter(),
+  });
+
+  /// Per-category totals with each category's share of the filtered set.
+  Future<Result<List<CategorySpending>>> getCategorySpending({
+    DateRange? range,
+    TransactionType type = TransactionType.expense,
+    TransactionFilter base = const TransactionFilter(),
+    int limit = 50,
+  });
+
+  /// One point per day with activity, oldest first.
+  Future<Result<List<TrendPoint>>> getDailySpending({
+    DateRange? range,
+    TransactionFilter base = const TransactionFilter(),
+  });
 }

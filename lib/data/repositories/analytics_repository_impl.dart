@@ -21,7 +21,7 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
       guard(() => _dao.totals(range), context: 'totals');
 
   @override
-  Future<Result<List<CategorySpending>>> getCategoryBreakdown(
+  Future<Result<CategoryBreakdown>> getCategoryBreakdown(
     DateRange range, {
     TransactionType type = TransactionType.expense,
     int limit = 20,
@@ -65,7 +65,7 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
         totalBalance: results[2] as double,
         todaySpend: results[3] as double,
         monthSpend: results[4] as double,
-        topCategories: results[5] as List<CategorySpending>,
+        breakdown: results[5] as CategoryBreakdown,
         trend: results[6] as List<TrendPoint>,
       );
     }, context: 'dashboardSummary');

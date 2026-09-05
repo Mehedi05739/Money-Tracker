@@ -88,8 +88,24 @@ Errors travel as values, never as exceptions crossing a layer:
 
 Schema version and migrations: `core/database/migrations.dart`. Every version is
 one entry in `kMigrations`; `applyMigrations` replays only what an install is
-missing. **Never edit a shipped migration — append a new one and bump
-`kDatabaseVersion`.**
+missing, in version order. **Never edit a shipped migration — append a new one
+and bump `kDatabaseVersion`.** Editing one would skip existing installs and give
+fresh installs a schema no upgrade path ever produced.
+
+sqflite runs `onCreate` and `onUpgrade` inside a transaction, so a failing
+statement rolls the step back and the stored version stays put; the next launch
+retries from the same place rather than landing half-migrated. A failure is
+wrapped in `MigrationException`, which names the version and statement — a bare
+SQL error gives no clue which step produced it.
+
+**Downgrade fails rather than deleting.** sqflite's `onDatabaseDowngradeDelete`
+would drop the file and start over; for a ledger that is silent, unrecoverable
+loss, so opening a newer database throws `DatabaseDowngradeException` and leaves
+the data untouched.
+
+**Startup failure is recoverable.** `main()` catches an open/migration failure
+and runs `StartupFailureApp` with the reason and a retry, instead of leaving a
+blank window with the cause only in the logs.
 
 Tables: `accounts`, `categories`, `transactions`, `budgets`, `spending_plans`,
 `spending_plan_items`, `financial_goals`, `goal_contributions`,
@@ -104,6 +120,21 @@ has them off by default.
 **Dates** are stored as ISO-8601 local strings without a timezone suffix, so
 lexicographic ordering equals chronological ordering and a day can be extracted
 with `substr(column, 1, 10)`.
+
+### Query paths
+
+Every filtered query is built by `TransactionDao._buildWhere`, which appends
+`?` placeholders and pushes values into a bound argument list — user input never
+reaches SQL text. `IN` clauses build their placeholders from
+`List.filled(n, '?')`, and `LIKE` searches escape `%` and `_` with an explicit
+`ESCAPE` clause so a typed `%` matches literally.
+
+`TransactionRepository` exposes the named queries (`getToday`, `getThisWeek`,
+`getThisMonth`, `getByDateRange`, `getByCategory`, `getByAccount`, `getIncome`,
+`getExpenses`, `getTransfers`) and the aggregates (`getTotals`,
+`getTotalIncome`, `getTotalExpenses`, `getCategorySpending`,
+`getDailySpending`). Each composes onto a `TransactionFilter`, so a total always
+describes exactly the rows the list is showing.
 
 ### Integrity invariants
 

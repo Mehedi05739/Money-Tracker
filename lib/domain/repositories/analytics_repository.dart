@@ -8,7 +8,9 @@ import '../entities/analytics.dart';
 abstract class AnalyticsRepository {
   Future<Result<PeriodTotals>> getTotals(DateRange range);
 
-  Future<Result<List<CategorySpending>>> getCategoryBreakdown(
+  /// Top [limit] categories plus the period totals they were measured
+  /// against, so shares stay relative to everything spent.
+  Future<Result<CategoryBreakdown>> getCategoryBreakdown(
     DateRange range, {
     TransactionType type = TransactionType.expense,
     int limit = 20,

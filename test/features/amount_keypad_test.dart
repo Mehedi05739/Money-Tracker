@@ -45,7 +45,9 @@ void main() {
 
   String type(String keys) {
     for (final key in keys.split('')) {
-      key == '.' ? controller.appendDecimalPoint() : controller.appendDigit(key);
+      key == '.'
+          ? controller.appendDecimalPoint()
+          : controller.appendDigit(key);
     }
     return controller.amountField.text;
   }

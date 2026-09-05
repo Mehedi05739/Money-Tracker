@@ -55,25 +55,28 @@ void main() {
   });
 
   test('deleting a transaction reverses its balance effect', () async {
-    final id =
-        await transactions.insert(tx(type: TransactionType.income, amount: 500));
+    final id = await transactions.insert(
+      tx(type: TransactionType.income, amount: 500),
+    );
     expect(await balanceOf(1), 500);
 
     await transactions.delete(id);
     expect(await balanceOf(1), 0);
   });
 
-  test('editing an amount reverses the old value before applying the new',
-      () async {
-    final id = await transactions.insert(
-      tx(type: TransactionType.expense, amount: 100),
-    );
-    expect(await balanceOf(1), -100);
+  test(
+    'editing an amount reverses the old value before applying the new',
+    () async {
+      final id = await transactions.insert(
+        tx(type: TransactionType.expense, amount: 100),
+      );
+      expect(await balanceOf(1), -100);
 
-    final stored = (await transactions.findById(id))!;
-    await transactions.update(stored.copyWith(amount: 30));
-    expect(await balanceOf(1), -30);
-  });
+      final stored = (await transactions.findById(id))!;
+      await transactions.update(stored.copyWith(amount: 30));
+      expect(await balanceOf(1), -30);
+    },
+  );
 
   test('changing a transaction type moves the balance both ways', () async {
     final id = await transactions.insert(
@@ -135,18 +138,24 @@ void main() {
     expect(await balanceOf(secondId), 140);
   });
 
-  test('recalculateAll reproduces the incrementally maintained balances',
-      () async {
-    await transactions.insert(tx(type: TransactionType.income, amount: 900));
-    await transactions.insert(tx(type: TransactionType.expense, amount: 120.5));
-    await transactions.insert(tx(type: TransactionType.expense, amount: 79.5));
+  test(
+    'recalculateAll reproduces the incrementally maintained balances',
+    () async {
+      await transactions.insert(tx(type: TransactionType.income, amount: 900));
+      await transactions.insert(
+        tx(type: TransactionType.expense, amount: 120.5),
+      );
+      await transactions.insert(
+        tx(type: TransactionType.expense, amount: 79.5),
+      );
 
-    final incremental = await balanceOf(1);
-    await accounts.recalculateAll();
+      final incremental = await balanceOf(1);
+      await accounts.recalculateAll();
 
-    expect(await balanceOf(1), incremental);
-    expect(incremental, 700);
-  });
+      expect(await balanceOf(1), incremental);
+      expect(incremental, 700);
+    },
+  );
 
   test('search escapes LIKE wildcards typed by the user', () async {
     final now = DateTime.now();

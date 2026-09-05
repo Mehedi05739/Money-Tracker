@@ -81,11 +81,7 @@ void main() {
   });
 
   test('savings rate is zero when there is no income', () async {
-    await add(
-      type: TransactionType.expense,
-      amount: 80,
-      date: DateTime.now(),
-    );
+    await add(type: TransactionType.expense, amount: 80, date: DateTime.now());
 
     final totals = await analytics.totals(thisMonth());
     expect(totals.savingsRate, 0);
@@ -124,18 +120,108 @@ void main() {
 
   test('category breakdown ranks by amount and computes shares', () async {
     final now = DateTime.now();
-    await add(type: TransactionType.expense, amount: 300, date: now, categoryId: 1);
-    await add(type: TransactionType.expense, amount: 100, date: now, categoryId: 1);
-    await add(type: TransactionType.expense, amount: 100, date: now, categoryId: 2);
+    await add(
+      type: TransactionType.expense,
+      amount: 300,
+      date: now,
+      categoryId: 1,
+    );
+    await add(
+      type: TransactionType.expense,
+      amount: 100,
+      date: now,
+      categoryId: 1,
+    );
+    await add(
+      type: TransactionType.expense,
+      amount: 100,
+      date: now,
+      categoryId: 2,
+    );
 
     final breakdown = await analytics.categoryBreakdown(thisMonth());
 
-    expect(breakdown, hasLength(2));
-    expect(breakdown.first.amount, 400);
-    expect(breakdown.first.transactionCount, 2);
-    expect(breakdown.first.share, closeTo(80, 0.001));
-    expect(breakdown.last.share, closeTo(20, 0.001));
+    expect(breakdown.entries, hasLength(2));
+    expect(breakdown.total, 500);
+    expect(breakdown.categoryCount, 2);
+    expect(breakdown.entries.first.amount, 400);
+    expect(breakdown.entries.first.transactionCount, 2);
+    expect(breakdown.entries.first.share, closeTo(80, 0.001));
+    expect(breakdown.entries.last.share, closeTo(20, 0.001));
+    expect(breakdown.hasOther, isFalse);
   });
+
+  test(
+    'shares stay relative to the period total when the list is capped',
+    () async {
+      final now = DateTime.now();
+      // Eight categories at 100 each: 800 spent in total.
+      for (var categoryId = 1; categoryId <= 8; categoryId++) {
+        await add(
+          type: TransactionType.expense,
+          amount: 100,
+          date: now,
+          categoryId: categoryId,
+        );
+      }
+
+      final breakdown = await analytics.categoryBreakdown(
+        thisMonth(),
+        limit: 6,
+      );
+
+      expect(breakdown.entries, hasLength(6));
+      expect(breakdown.total, 800, reason: 'the period total, not the top six');
+      expect(breakdown.categoryCount, 8);
+
+      // Each listed category is an eighth of the spend, not a sixth.
+      expect(breakdown.entries.first.share, closeTo(12.5, 0.001));
+
+      // The two categories that did not make the list are still accounted for.
+      expect(breakdown.otherAmount, 200);
+      expect(breakdown.otherShare, closeTo(25, 0.001));
+      expect(breakdown.hasOther, isTrue);
+
+      final listedShare = breakdown.entries.fold<double>(
+        0,
+        (sum, e) => sum + e.share,
+      );
+      expect(listedShare + breakdown.otherShare, closeTo(100, 0.001));
+    },
+  );
+
+  test('reports no remainder when every category is listed', () async {
+    final now = DateTime.now();
+    await add(
+      type: TransactionType.expense,
+      amount: 40,
+      date: now,
+      categoryId: 1,
+    );
+    await add(
+      type: TransactionType.expense,
+      amount: 60,
+      date: now,
+      categoryId: 2,
+    );
+
+    final breakdown = await analytics.categoryBreakdown(thisMonth(), limit: 6);
+
+    expect(breakdown.hasOther, isFalse);
+    expect(breakdown.otherAmount, 0);
+  });
+
+  test(
+    'an empty period yields an empty breakdown, not a divide by zero',
+    () async {
+      final breakdown = await analytics.categoryBreakdown(thisMonth());
+
+      expect(breakdown.isEmpty, isTrue);
+      expect(breakdown.total, 0);
+      expect(breakdown.otherShare, 0);
+      expect(breakdown.top, isNull);
+    },
+  );
 
   test('daily trend returns one point per day with data', () async {
     final today = AppDate.startOfDay(DateTime.now());
@@ -188,8 +274,10 @@ void main() {
     expect(filled, hasLength(3), reason: 'two days back, plus today');
     expect(filled.last.expense, 10);
     expect(
-      filled.every((point) => !AppDate.startOfDay(point.date)
-          .isAfter(AppDate.startOfDay(now))),
+      filled.every(
+        (point) =>
+            !AppDate.startOfDay(point.date).isAfter(AppDate.startOfDay(now)),
+      ),
       isTrue,
     );
   });

@@ -8,7 +8,9 @@ void main() {
 
   test('notifies listeners registered for that kind', () {
     var calls = 0;
-    final worker = events.listen(const [DataChange.transactions], () => calls++);
+    final worker = events.listen(const [
+      DataChange.transactions,
+    ], () => calls++);
     addTearDown(worker.dispose);
 
     events.emit(DataChange.transactions);
@@ -28,7 +30,9 @@ void main() {
 
   test('fires again when the same kind is emitted twice', () {
     var calls = 0;
-    final worker = events.listen(const [DataChange.transactions], () => calls++);
+    final worker = events.listen(const [
+      DataChange.transactions,
+    ], () => calls++);
     addTearDown(worker.dispose);
 
     events
@@ -41,10 +45,10 @@ void main() {
   test('notifies every interested listener', () {
     var dashboard = 0;
     var reports = 0;
-    final a = events.listen(
-      const [DataChange.transactions, DataChange.budgets],
-      () => dashboard++,
-    );
+    final a = events.listen(const [
+      DataChange.transactions,
+      DataChange.budgets,
+    ], () => dashboard++);
     final b = events.listen(const [DataChange.transactions], () => reports++);
     addTearDown(a.dispose);
     addTearDown(b.dispose);
@@ -58,7 +62,9 @@ void main() {
 
   test('a disposed listener stops receiving events', () {
     var calls = 0;
-    final worker = events.listen(const [DataChange.transactions], () => calls++);
+    final worker = events.listen(const [
+      DataChange.transactions,
+    ], () => calls++);
 
     events.emit(DataChange.transactions);
     worker.dispose();

@@ -96,13 +96,12 @@ Map<String, Object?> _row({
   int accountId = 1,
   String type = 'expense',
   double amount = 10,
-}) =>
-    {
-      'account_id': accountId,
-      'type': type,
-      'amount': amount,
-      'title': 'Test',
-      'transaction_date': '2026-09-05T10:00:00.000',
-      'created_at': '2026-09-05T10:00:00.000',
-      'updated_at': '2026-09-05T10:00:00.000',
-    };
+}) => {
+  'account_id': accountId,
+  'type': type,
+  'amount': amount,
+  'title': 'Test',
+  'transaction_date': '2026-09-05T10:00:00.000',
+  'created_at': '2026-09-05T10:00:00.000',
+  'updated_at': '2026-09-05T10:00:00.000',
+};

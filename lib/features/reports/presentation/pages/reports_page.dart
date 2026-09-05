@@ -124,7 +124,7 @@ class _ReportBody extends StatelessWidget {
           ),
           AppSpacing.gapMd,
           Obx(() {
-            final breakdown = controller.breakdown;
+            final breakdown = controller.breakdown.value;
             if (breakdown.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -140,12 +140,30 @@ class _ReportBody extends StatelessWidget {
               );
             }
 
+            final entries = breakdown.entries;
             return Column(
               children: [
-                for (var i = 0; i < breakdown.length; i++)
+                for (var i = 0; i < entries.length; i++)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    child: _CategoryRow(entry: breakdown[i], seed: i),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.base,
+                      0,
+                      AppSpacing.base,
+                      AppSpacing.sm,
+                    ),
+                    child: _CategoryRow(entry: entries[i], seed: i),
+                  ),
+                // Everything outside the listed categories, so the percentages
+                // on screen add up to the period's real spending.
+                if (breakdown.hasOther)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.base,
+                      0,
+                      AppSpacing.base,
+                      AppSpacing.sm,
+                    ),
+                    child: _OtherRow(breakdown: breakdown),
                   ),
               ],
             );
@@ -387,6 +405,59 @@ class _CategoryRow extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The tail of the distribution, shown so the listed shares are honest about
+/// what they leave out.
+class _OtherRow extends StatelessWidget {
+  const _OtherRow({required this.breakdown});
+
+  final CategoryBreakdown breakdown;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final remaining = breakdown.categoryCount - breakdown.entries.length;
+
+    return AppCard(
+      padding: AppSpacing.cardCompact,
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 19,
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            child: Icon(
+              Icons.more_horiz_rounded,
+              size: 18,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          AppSpacing.hGapMd,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  remaining > 0 ? 'Other ($remaining categories)' : 'Other',
+                  style: theme.textTheme.titleSmall,
+                ),
+                Text(
+                  '${breakdown.otherShare.toStringAsFixed(1)}% of the period',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            Money.format(breakdown.otherAmount),
+            style: theme.textTheme.titleSmall,
           ),
         ],
       ),

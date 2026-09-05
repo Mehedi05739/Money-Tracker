@@ -1,6 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/database/db_tables.dart';
+import '../../../core/enums/transaction_type.dart';
+import '../../../domain/entities/analytics.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../domain/entities/money_transaction.dart';
 import '../../../domain/repositories/transaction_repository.dart';
@@ -128,6 +130,122 @@ class TransactionDao {
         whereArgs: [id],
       );
     });
+  }
+
+  // ---- Aggregates ---------------------------------------------------------
+  // These answer questions about many rows without returning any. The filter
+  // is the same one the list uses, so a total always describes exactly the
+  // rows the user is looking at.
+
+  /// Income, expense, transfer and row count for [filter], in one pass.
+  Future<TransactionTotals> totals(TransactionFilter filter) async {
+    final clause = _buildWhere(filter);
+    final rows = await _db.rawQuery('''
+      SELECT
+        COALESCE(SUM(CASE WHEN t.${TransactionColumns.type} = 'income'
+                          THEN t.${TransactionColumns.amount} END), 0) AS income,
+        COALESCE(SUM(CASE WHEN t.${TransactionColumns.type} = 'expense'
+                          THEN t.${TransactionColumns.amount} END), 0) AS expense,
+        COALESCE(SUM(CASE WHEN t.${TransactionColumns.type} = 'transfer'
+                          THEN t.${TransactionColumns.amount} END), 0) AS transfer,
+        COUNT(*) AS tx_count
+      FROM ${Tables.transactions} t
+      ${clause.sql}
+      ''', clause.args);
+
+    final row = rows.first;
+    return TransactionTotals(
+      income: row.readDoubleOr('income'),
+      expense: row.readDoubleOr('expense'),
+      transfer: row.readDoubleOr('transfer'),
+      count: row.readIntOrNull('tx_count') ?? 0,
+    );
+  }
+
+  /// Sum of a single [type] under [filter].
+  Future<double> sumByType(
+    TransactionFilter filter,
+    TransactionType type,
+  ) async {
+    final clause = _buildWhere(filter.copyWith(types: {type}));
+    final rows = await _db.rawQuery(
+      'SELECT COALESCE(SUM(t.${TransactionColumns.amount}), 0) AS total '
+      'FROM ${Tables.transactions} t ${clause.sql}',
+      clause.args,
+    );
+    return rows.first.readDoubleOr('total');
+  }
+
+  /// Per-category totals for [filter], largest first.
+  Future<List<CategorySpending>> categoryTotals(
+    TransactionFilter filter, {
+    int limit = 50,
+  }) async {
+    final clause = _buildWhere(filter);
+    final rows = await _db.rawQuery(
+      '''
+      SELECT t.${TransactionColumns.categoryId}      AS category_id,
+             COALESCE(c.${CategoryColumns.name}, 'Uncategorized') AS category_name,
+             c.${CategoryColumns.icon}               AS category_icon,
+             c.${CategoryColumns.color}              AS category_color,
+             SUM(t.${TransactionColumns.amount})     AS total,
+             COUNT(*)                                AS tx_count
+      FROM ${Tables.transactions} t
+      LEFT JOIN ${Tables.categories} c
+             ON c.${CategoryColumns.id} = t.${TransactionColumns.categoryId}
+      ${clause.sql}
+      GROUP BY t.${TransactionColumns.categoryId}
+      ORDER BY total DESC
+      LIMIT ?
+      ''',
+      [...clause.args, limit],
+    );
+
+    final total = rows.fold<double>(
+      0,
+      (sum, row) => sum + row.readDoubleOr('total'),
+    );
+
+    // Every group is present here (no truncation before the sum), so this
+    // total is the real one and the shares are honest.
+    return rows
+        .map(
+          (row) => CategorySpending(
+            categoryId: row.readIntOrNull('category_id'),
+            categoryName: row.readString('category_name'),
+            categoryIcon: row.readStringOrNull('category_icon'),
+            categoryColor: row.readIntOrNull('category_color'),
+            amount: row.readDoubleOr('total'),
+            transactionCount: row.readIntOrNull('tx_count') ?? 0,
+          ).withShare(total),
+        )
+        .toList();
+  }
+
+  /// One row per day that has activity under [filter], oldest first.
+  Future<List<TrendPoint>> dailyTotals(TransactionFilter filter) async {
+    final clause = _buildWhere(filter);
+    final rows = await _db.rawQuery('''
+      SELECT substr(t.${TransactionColumns.transactionDate}, 1, 10) AS day,
+             COALESCE(SUM(CASE WHEN t.${TransactionColumns.type} = 'income'
+                               THEN t.${TransactionColumns.amount} END), 0) AS income,
+             COALESCE(SUM(CASE WHEN t.${TransactionColumns.type} = 'expense'
+                               THEN t.${TransactionColumns.amount} END), 0) AS expense
+      FROM ${Tables.transactions} t
+      ${clause.sql}
+      GROUP BY day
+      ORDER BY day ASC
+      ''', clause.args);
+
+    return rows.map((row) {
+      final day = DateTime.parse(row.readString('day'));
+      return TrendPoint(
+        label: '${day.day}',
+        date: day,
+        income: row.readDoubleOr('income'),
+        expense: row.readDoubleOr('expense'),
+      );
+    }).toList();
   }
 
   /// Bulk insert used when materialising recurring rules; shares one SQL

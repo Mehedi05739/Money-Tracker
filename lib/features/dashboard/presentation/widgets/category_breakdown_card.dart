@@ -9,14 +9,17 @@ import '../../../../core/theme/app_spacing.dart';
 
 /// Spending-by-category donut with a ranked legend.
 class CategoryBreakdownCard extends StatelessWidget {
-  const CategoryBreakdownCard({super.key, required this.categories});
+  const CategoryBreakdownCard({super.key, required this.breakdown});
 
-  final List<CategorySpending> categories;
+  final CategoryBreakdown breakdown;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final total = categories.fold<double>(0, (sum, c) => sum + c.amount);
+    final categories = breakdown.entries;
+    // The period's real total, not the sum of the slices on screen — the list
+    // is capped, and labelling a partial sum "spent" would be wrong.
+    final total = breakdown.total;
 
     if (categories.isEmpty) {
       return AppCard(
@@ -71,8 +74,16 @@ class CategoryBreakdownCard extends StatelessWidget {
                 seed: i,
               ),
             ),
-            if (i < categories.length - 1) AppSpacing.gapMd,
+            if (i < categories.length - 1 || breakdown.hasOther)
+              AppSpacing.gapMd,
           ],
+          if (breakdown.hasOther)
+            _LegendRow.other(
+              amount: breakdown.otherAmount,
+              share: breakdown.otherShare,
+              count: breakdown.categoryCount - categories.length,
+              color: theme.colorScheme.outlineVariant,
+            ),
         ],
       ),
     );
@@ -80,10 +91,32 @@ class CategoryBreakdownCard extends StatelessWidget {
 }
 
 class _LegendRow extends StatelessWidget {
-  const _LegendRow({required this.category, required this.color});
+  const _LegendRow({required this.category, required this.color})
+    : otherAmount = null,
+      otherShare = 0,
+      otherCount = 0;
 
-  final CategorySpending category;
+  const _LegendRow.other({
+    required double amount,
+    required double share,
+    required int count,
+    required this.color,
+  }) : category = null,
+       otherAmount = amount,
+       otherShare = share,
+       otherCount = count;
+
+  final CategorySpending? category;
+  final double? otherAmount;
+  final double otherShare;
+  final int otherCount;
   final Color color;
+
+  String get _name =>
+      category?.categoryName ??
+      (otherCount > 0 ? 'Other ($otherCount)' : 'Other');
+  double get _amount => category?.amount ?? otherAmount ?? 0;
+  double get _share => category?.share ?? otherShare;
 
   @override
   Widget build(BuildContext context) {
@@ -91,8 +124,8 @@ class _LegendRow extends StatelessWidget {
 
     return Semantics(
       label:
-          '${category.categoryName}, ${Money.format(category.amount)}, '
-          '${category.share.toStringAsFixed(0)} percent',
+          '$_name, ${Money.format(_amount)}, '
+          '${_share.toStringAsFixed(0)} percent',
       child: Row(
         children: [
           Container(
@@ -103,7 +136,7 @@ class _LegendRow extends StatelessWidget {
           AppSpacing.hGapSm,
           Expanded(
             child: Text(
-              category.categoryName,
+              _name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyMedium,
@@ -113,7 +146,7 @@ class _LegendRow extends StatelessWidget {
           SizedBox(
             width: 42,
             child: Text(
-              '${category.share.toStringAsFixed(0)}%',
+              '${_share.toStringAsFixed(0)}%',
               textAlign: TextAlign.right,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -121,10 +154,7 @@ class _LegendRow extends StatelessWidget {
             ),
           ),
           AppSpacing.hGapSm,
-          Text(
-            Money.format(category.amount),
-            style: theme.textTheme.titleSmall,
-          ),
+          Text(Money.format(_amount), style: theme.textTheme.titleSmall),
         ],
       ),
     );

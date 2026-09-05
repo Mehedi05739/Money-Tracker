@@ -29,6 +29,23 @@ class CacheException extends AppException {
   const CacheException([super.message = 'Cache error']);
 }
 
+/// The stored database was written by a newer build of the app.
+///
+/// Deleting it would be silent data loss, so opening fails and the user is told
+/// to update instead.
+class DatabaseDowngradeException extends AppException {
+  const DatabaseDowngradeException({
+    required this.currentVersion,
+    required this.supportedVersion,
+  }) : super(
+         'This data was saved by a newer version of the app. '
+         'Update to open it.',
+       );
+
+  final int currentVersion;
+  final int supportedVersion;
+}
+
 class ParseException extends AppException {
   const ParseException([super.message = 'Malformed response']);
 }

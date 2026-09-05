@@ -132,7 +132,7 @@ class _DashboardBody extends StatelessWidget {
         const SectionHeader(title: 'Where your money goes'),
         Padding(
           padding: AppSpacing.screenH,
-          child: CategoryBreakdownCard(categories: summary.topCategories),
+          child: CategoryBreakdownCard(breakdown: summary.breakdown),
         ),
         const SectionHeader(title: 'Income vs expense'),
         Padding(

@@ -13,22 +13,84 @@ class Migration {
 }
 
 /// Bumped whenever a migration is appended.
-const int kDatabaseVersion = 1;
+const int kDatabaseVersion = 2;
 
-const List<Migration> kMigrations = [Migration(version: 1, statements: _v1)];
+const List<Migration> kMigrations = [
+  Migration(version: 1, statements: _v1),
+  Migration(version: 2, statements: _v2),
+];
 
+/// Replays every migration in `(from, to]`, in version order.
+///
+/// sqflite runs `onCreate` and `onUpgrade` inside a transaction, so a statement
+/// that throws rolls the whole step back and the stored version stays put — the
+/// next launch retries from the same place rather than landing half-migrated.
 Future<void> applyMigrations(
   DatabaseExecutor db, {
   required int from,
   required int to,
 }) async {
-  for (final migration in kMigrations) {
-    if (migration.version <= from || migration.version > to) continue;
+  final pending =
+      kMigrations
+          .where(
+            (migration) => migration.version > from && migration.version <= to,
+          )
+          .toList()
+        ..sort((a, b) => a.version.compareTo(b.version));
+
+  for (final migration in pending) {
     for (final statement in migration.statements) {
-      await db.execute(statement);
+      try {
+        await db.execute(statement);
+      } on DatabaseException catch (error) {
+        // Name the version that failed. Without this the report is a bare SQL
+        // error with no indication of which upgrade step produced it.
+        throw MigrationException(
+          version: migration.version,
+          statement: statement,
+          cause: error,
+        );
+      }
     }
   }
 }
+
+/// A migration statement that failed, tagged with the version it belongs to.
+class MigrationException implements Exception {
+  const MigrationException({
+    required this.version,
+    required this.statement,
+    required this.cause,
+  });
+
+  final int version;
+  final String statement;
+  final Object cause;
+
+  /// First line only — enough to locate the statement without dumping schema
+  /// into a log.
+  String get statementSummary => statement.trim().split('\n').first.trim();
+
+  @override
+  String toString() =>
+      'MigrationException(v$version): $statementSummary -> $cause';
+}
+
+/// v2 — indexes for queries that shipped without one.
+///
+/// Never edit a shipped migration: installs already at v1 would skip the change
+/// entirely, and installs created fresh would get a schema no upgrade path ever
+/// produced. Append instead.
+const List<String> _v2 = [
+  // Budgets are listed and filtered by period.
+  'CREATE INDEX IF NOT EXISTS idx_budgets_period '
+      'ON budgets (period, is_active)',
+
+  // The account filter matches transfers on their destination too, which the
+  // v1 indexes did not cover.
+  'CREATE INDEX IF NOT EXISTS idx_tx_to_account '
+      'ON transactions (to_account_id, transaction_date)',
+];
 
 const List<String> _v1 = [
   '''

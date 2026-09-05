@@ -33,6 +33,42 @@ class PeriodTotals {
   bool get isEmpty => transactionCount == 0;
 }
 
+/// Totals for an arbitrary [TransactionFilter].
+///
+/// Distinct from [PeriodTotals], which is tied to a date range: this is what a
+/// filtered ledger view sums to, so "total expenses for Groceries on the Cash
+/// account this week" is one query rather than a page of rows added up in Dart.
+class TransactionTotals {
+  const TransactionTotals({
+    required this.income,
+    required this.expense,
+    required this.transfer,
+    required this.count,
+  });
+
+  const TransactionTotals.empty()
+    : income = 0,
+      expense = 0,
+      transfer = 0,
+      count = 0;
+
+  final double income;
+  final double expense;
+
+  /// Moved between the user's own accounts. Excluded from [net] because it
+  /// changes no net worth.
+  final double transfer;
+
+  final int count;
+
+  double get net => income - expense;
+
+  /// Share of income kept, 0–100. Zero income means nothing was saved.
+  double get savingsRate => income <= 0 ? 0 : (net / income) * 100;
+
+  bool get isEmpty => count == 0;
+}
+
 /// One slice of the category breakdown.
 class CategorySpending {
   const CategorySpending({
@@ -67,6 +103,49 @@ class CategorySpending {
   );
 }
 
+/// A category breakdown together with the totals it was drawn from.
+///
+/// [entries] is capped by the caller's limit, so it is usually *not* the whole
+/// picture. Carrying [total] separately means a share is a share of everything
+/// the user spent, not of whatever survived the `LIMIT` — and the UI can label
+/// the remainder honestly instead of implying the top slices are all there is.
+class CategoryBreakdown {
+  const CategoryBreakdown({
+    required this.entries,
+    required this.total,
+    required this.categoryCount,
+  });
+
+  const CategoryBreakdown.empty()
+    : entries = const [],
+      total = 0,
+      categoryCount = 0;
+
+  final List<CategorySpending> entries;
+
+  /// Total across every category in the period, including those not listed.
+  final double total;
+
+  /// How many distinct categories contributed, listed or not.
+  final int categoryCount;
+
+  bool get isEmpty => entries.isEmpty;
+
+  /// Spending in categories beyond the listed ones.
+  double get otherAmount {
+    final listed = entries.fold<double>(0, (sum, e) => sum + e.amount);
+    final remainder = total - listed;
+    // Guard against float dust presenting as a phantom slice.
+    return remainder < 0.005 ? 0 : remainder;
+  }
+
+  bool get hasOther => otherAmount > 0;
+
+  double get otherShare => total <= 0 ? 0 : (otherAmount / total) * 100;
+
+  CategorySpending? get top => entries.isEmpty ? null : entries.first;
+}
+
 /// A point on the daily/monthly trend chart.
 class TrendPoint {
   const TrendPoint({
@@ -93,7 +172,7 @@ class DashboardSummary {
     required this.totalBalance,
     required this.todaySpend,
     required this.monthSpend,
-    required this.topCategories,
+    required this.breakdown,
     required this.trend,
   });
 
@@ -103,7 +182,7 @@ class DashboardSummary {
       totalBalance = 0,
       todaySpend = 0,
       monthSpend = 0,
-      topCategories = const [],
+      breakdown = const CategoryBreakdown.empty(),
       trend = const [];
 
   final DateRange range;
@@ -112,11 +191,12 @@ class DashboardSummary {
   final double totalBalance;
   final double todaySpend;
   final double monthSpend;
-  final List<CategorySpending> topCategories;
+  final CategoryBreakdown breakdown;
   final List<TrendPoint> trend;
 
-  CategorySpending? get highestCategory =>
-      topCategories.isEmpty ? null : topCategories.first;
+  List<CategorySpending> get topCategories => breakdown.entries;
+
+  CategorySpending? get highestCategory => breakdown.top;
 
   /// Change in spending versus the preceding equal-length window, as a signed
   /// percentage. `null` when there is no prior data to compare against.

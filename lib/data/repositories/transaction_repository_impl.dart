@@ -1,6 +1,9 @@
+import '../../core/enums/transaction_type.dart';
 import '../../core/errors/failures.dart';
+import '../../core/utils/date_range.dart';
 import '../../core/utils/result.dart';
 import '../../core/utils/validators.dart';
+import '../../domain/entities/analytics.dart';
 import '../../domain/entities/money_transaction.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../local/daos/transaction_dao.dart';
@@ -68,6 +71,162 @@ class TransactionRepositoryImpl implements TransactionRepository {
   @override
   Future<Result<void>> delete(int id) =>
       guard(() => _dao.delete(id), context: 'deleteTransaction');
+
+  // ---- Named queries ------------------------------------------------------
+
+  @override
+  Future<Result<List<MoneyTransaction>>> getToday({
+    TransactionFilter base = const TransactionFilter(),
+    int limit = 100,
+  }) => getByDateRange(
+    DateRange.fromPreset(DateRangePreset.today),
+    base: base,
+    limit: limit,
+  );
+
+  @override
+  Future<Result<List<MoneyTransaction>>> getThisWeek({
+    TransactionFilter base = const TransactionFilter(),
+    int limit = 100,
+  }) => getByDateRange(
+    DateRange.fromPreset(DateRangePreset.thisWeek),
+    base: base,
+    limit: limit,
+  );
+
+  @override
+  Future<Result<List<MoneyTransaction>>> getThisMonth({
+    TransactionFilter base = const TransactionFilter(),
+    int limit = 100,
+  }) => getByDateRange(
+    DateRange.fromPreset(DateRangePreset.thisMonth),
+    base: base,
+    limit: limit,
+  );
+
+  @override
+  Future<Result<List<MoneyTransaction>>> getByDateRange(
+    DateRange range, {
+    TransactionFilter base = const TransactionFilter(),
+    int limit = 100,
+    int offset = 0,
+  }) => getTransactions(
+    filter: base.copyWith(range: range),
+    limit: limit,
+    offset: offset,
+  );
+
+  @override
+  Future<Result<List<MoneyTransaction>>> getByCategory(
+    int categoryId, {
+    DateRange? range,
+    int limit = 100,
+    int offset = 0,
+  }) => getTransactions(
+    filter: TransactionFilter(range: range, categoryIds: {categoryId}),
+    limit: limit,
+    offset: offset,
+  );
+
+  @override
+  Future<Result<List<MoneyTransaction>>> getByAccount(
+    int accountId, {
+    DateRange? range,
+    int limit = 100,
+    int offset = 0,
+  }) => getTransactions(
+    filter: TransactionFilter(range: range, accountIds: {accountId}),
+    limit: limit,
+    offset: offset,
+  );
+
+  @override
+  Future<Result<List<MoneyTransaction>>> getIncome({
+    DateRange? range,
+    int limit = 100,
+    int offset = 0,
+  }) => _byType(TransactionType.income, range, limit, offset);
+
+  @override
+  Future<Result<List<MoneyTransaction>>> getExpenses({
+    DateRange? range,
+    int limit = 100,
+    int offset = 0,
+  }) => _byType(TransactionType.expense, range, limit, offset);
+
+  @override
+  Future<Result<List<MoneyTransaction>>> getTransfers({
+    DateRange? range,
+    int limit = 100,
+    int offset = 0,
+  }) => _byType(TransactionType.transfer, range, limit, offset);
+
+  Future<Result<List<MoneyTransaction>>> _byType(
+    TransactionType type,
+    DateRange? range,
+    int limit,
+    int offset,
+  ) => getTransactions(
+    filter: TransactionFilter(range: range, types: {type}),
+    limit: limit,
+    offset: offset,
+  );
+
+  // ---- Aggregates ---------------------------------------------------------
+
+  @override
+  Future<Result<TransactionTotals>> getTotals([
+    TransactionFilter filter = const TransactionFilter(),
+  ]) => guard(() => _dao.totals(filter), context: 'transactionTotals');
+
+  @override
+  Future<Result<double>> getTotalIncome({
+    DateRange? range,
+    TransactionFilter base = const TransactionFilter(),
+  }) => guard(
+    () => _dao.sumByType(
+      range == null ? base : base.copyWith(range: range),
+      TransactionType.income,
+    ),
+    context: 'totalIncome',
+  );
+
+  @override
+  Future<Result<double>> getTotalExpenses({
+    DateRange? range,
+    TransactionFilter base = const TransactionFilter(),
+  }) => guard(
+    () => _dao.sumByType(
+      range == null ? base : base.copyWith(range: range),
+      TransactionType.expense,
+    ),
+    context: 'totalExpenses',
+  );
+
+  @override
+  Future<Result<List<CategorySpending>>> getCategorySpending({
+    DateRange? range,
+    TransactionType type = TransactionType.expense,
+    TransactionFilter base = const TransactionFilter(),
+    int limit = 50,
+  }) => guard(
+    () => _dao.categoryTotals(
+      (range == null ? base : base.copyWith(range: range)).copyWith(
+        types: {type},
+      ),
+      limit: limit,
+    ),
+    context: 'categorySpending',
+  );
+
+  @override
+  Future<Result<List<TrendPoint>>> getDailySpending({
+    DateRange? range,
+    TransactionFilter base = const TransactionFilter(),
+  }) => guard(
+    () => _dao.dailyTotals(range == null ? base : base.copyWith(range: range)),
+    context: 'dailySpending',
+  );
 
   /// Rounds the amount to cents and drops fields that do not apply to the
   /// chosen type, so a type switch in the form cannot leave stale data behind.

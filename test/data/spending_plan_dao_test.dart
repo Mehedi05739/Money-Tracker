@@ -127,18 +127,20 @@ void main() {
     expect(progress.safeDailyAllowance, 0);
   });
 
-  test('re-allocating a category replaces the amount rather than adding a row',
-      () async {
-    final plan = await addPlan();
-    await allocate(plan.id, 1, 100);
+  test(
+    're-allocating a category replaces the amount rather than adding a row',
+    () async {
+      final plan = await addPlan();
+      await allocate(plan.id, 1, 100);
 
-    final existing = (await plans.findItems(plan.id)).single;
-    await plans.upsertItem(existing.copyWith(plannedAmount: 250));
+      final existing = (await plans.findItems(plan.id)).single;
+      await plans.upsertItem(existing.copyWith(plannedAmount: 250));
 
-    final items = await plans.findItems(plan.id);
-    expect(items, hasLength(1));
-    expect(items.single.plannedAmount, 250);
-  });
+      final items = await plans.findItems(plan.id);
+      expect(items, hasLength(1));
+      expect(items.single.plannedAmount, 250);
+    },
+  );
 
   test('deleting a plan removes its allocations', () async {
     final plan = await addPlan();

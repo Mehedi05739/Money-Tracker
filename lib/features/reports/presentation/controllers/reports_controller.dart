@@ -20,14 +20,13 @@ class ReportsController extends BaseController {
 
   final Rxn<PeriodTotals> totals = Rxn<PeriodTotals>();
   final Rxn<PeriodTotals> previousTotals = Rxn<PeriodTotals>();
-  final RxList<CategorySpending> breakdown = <CategorySpending>[].obs;
+  final Rx<CategoryBreakdown> breakdown = const CategoryBreakdown.empty().obs;
   final RxList<TrendPoint> trend = <TrendPoint>[].obs;
 
   /// Charted by month for long windows, by day for short ones.
   bool get isMonthlyTrend => range.value.dayCount > 62;
 
-  CategorySpending? get topCategory =>
-      breakdown.isEmpty ? null : breakdown.first;
+  CategorySpending? get topCategory => breakdown.value.top;
 
   /// Average spend across days that actually had spending — a better sense of
   /// "a typical spending day" than dividing by every calendar day.
@@ -81,7 +80,8 @@ class ReportsController extends BaseController {
 
     final totalsResult = await totalsFuture;
     previousTotals.value = (await previousFuture).dataOrNull;
-    breakdown.assignAll((await breakdownFuture).dataOrNull ?? const []);
+    breakdown.value =
+        (await breakdownFuture).dataOrNull ?? const CategoryBreakdown.empty();
     trend.assignAll((await trendFuture).dataOrNull ?? const []);
 
     totalsResult.fold(

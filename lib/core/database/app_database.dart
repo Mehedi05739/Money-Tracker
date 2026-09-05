@@ -12,12 +12,21 @@ import 'seed_data.dart';
 /// their own handles, so all writes share one connection and can participate in
 /// the same SQL transaction.
 class AppDatabase {
-  AppDatabase({this.fileName = 'money_tracker.db', this.factoryOverride});
+  AppDatabase({
+    this.fileName = 'money_tracker.db',
+    this.factoryOverride,
+    int? targetVersion,
+  }) : targetVersion = targetVersion ?? kDatabaseVersion;
 
   final String fileName;
 
   /// Injected by tests to run against an in-memory database.
   final DatabaseFactory? factoryOverride;
+
+  /// Schema version to open at. Production always uses [kDatabaseVersion];
+  /// tests pin an older version so the upgrade path can be exercised rather
+  /// than assumed.
+  final int targetVersion;
 
   Database? _db;
 
@@ -42,18 +51,28 @@ class AppDatabase {
       _db = await factory.openDatabase(
         path,
         options: OpenDatabaseOptions(
-          version: kDatabaseVersion,
+          version: targetVersion,
           onConfigure: _onConfigure,
           onCreate: _onCreate,
           onUpgrade: _onUpgrade,
-          onDowngrade: onDatabaseDowngradeDelete,
+          onDowngrade: _onDowngrade,
         ),
       );
       return _db!;
+    } on MigrationException catch (error, stackTrace) {
+      // Log the version and statement, never the rows involved.
+      AppLogger.e(
+        'Migration to v${error.version} failed: ${error.statementSummary}',
+        error: error.cause.runtimeType,
+        stackTrace: stackTrace,
+      );
+      throw CacheException(
+        'Could not update the local database to version ${error.version}',
+      );
     } on DatabaseException catch (error, stackTrace) {
       AppLogger.e(
         'Failed to open database',
-        error: error,
+        error: error.runtimeType,
         stackTrace: stackTrace,
       );
       throw const CacheException('Could not open the local database');
@@ -84,6 +103,22 @@ class AppDatabase {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     AppLogger.i('Upgrading database $oldVersion → $newVersion', name: 'DB');
     await applyMigrations(db, from: oldVersion, to: newVersion);
+  }
+
+  /// Refuses to open a database written by a newer build.
+  ///
+  /// sqflite's `onDatabaseDowngradeDelete` would drop the file and start over.
+  /// For a ledger that is silent, unrecoverable loss of the user's financial
+  /// history, so this fails loudly instead and leaves the data untouched.
+  Future<void> _onDowngrade(Database db, int oldVersion, int newVersion) async {
+    AppLogger.e(
+      'Refusing to downgrade database $oldVersion → $newVersion',
+      name: 'DB',
+    );
+    throw DatabaseDowngradeException(
+      currentVersion: oldVersion,
+      supportedVersion: newVersion,
+    );
   }
 
   /// Runs [action] inside a single SQL transaction. Any thrown error rolls the

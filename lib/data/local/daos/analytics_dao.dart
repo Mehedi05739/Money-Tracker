@@ -73,7 +73,12 @@ class AnalyticsDao {
     return rows.first.readDoubleOr('total');
   }
 
-  Future<List<CategorySpending>> categoryBreakdown(
+  /// Top [limit] categories, plus the totals they were drawn from.
+  ///
+  /// The grand total is a second scalar aggregate rather than a sum of the
+  /// returned rows: those are truncated by `LIMIT`, so folding them would make
+  /// every share a share of the visible slice instead of the real spend.
+  Future<CategoryBreakdown> categoryBreakdown(
     DateRange range, {
     TransactionType type = TransactionType.expense,
     int limit = 20,
@@ -98,23 +103,35 @@ class AnalyticsDao {
       [type.name, range.startDb, range.endDb, limit],
     );
 
-    final total = rows.fold<double>(
-      0,
-      (sum, row) => sum + row.readDoubleOr('total'),
+    final totals = await _db.rawQuery(
+      '''
+      SELECT COALESCE(SUM(${TransactionColumns.amount}), 0) AS grand_total,
+             COUNT(DISTINCT ${TransactionColumns.categoryId}) AS category_count
+      FROM ${Tables.transactions}
+      WHERE ${TransactionColumns.type} = ?
+        AND ${TransactionColumns.transactionDate} BETWEEN ? AND ?
+      ''',
+      [type.name, range.startDb, range.endDb],
     );
 
-    return rows
-        .map(
-          (row) => CategorySpending(
-            categoryId: row.readIntOrNull('category_id'),
-            categoryName: row.readString('category_name'),
-            categoryIcon: row.readStringOrNull('category_icon'),
-            categoryColor: row.readIntOrNull('category_color'),
-            amount: row.readDoubleOr('total'),
-            transactionCount: row.readIntOrNull('tx_count') ?? 0,
-          ).withShare(total),
-        )
-        .toList();
+    final grandTotal = totals.first.readDoubleOr('grand_total');
+
+    return CategoryBreakdown(
+      total: grandTotal,
+      categoryCount: totals.first.readIntOrNull('category_count') ?? 0,
+      entries: rows
+          .map(
+            (row) => CategorySpending(
+              categoryId: row.readIntOrNull('category_id'),
+              categoryName: row.readString('category_name'),
+              categoryIcon: row.readStringOrNull('category_icon'),
+              categoryColor: row.readIntOrNull('category_color'),
+              amount: row.readDoubleOr('total'),
+              transactionCount: row.readIntOrNull('tx_count') ?? 0,
+            ).withShare(grandTotal),
+          )
+          .toList(),
+    );
   }
 
   /// One point per day that has data. Gaps are filled by the caller so the

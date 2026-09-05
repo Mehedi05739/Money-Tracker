@@ -92,11 +92,7 @@ void main() {
 
   test('rejects a transfer to the same account', () async {
     final result = await repository.create(
-      draft(
-        type: TransactionType.transfer,
-        categoryId: null,
-        toAccountId: 1,
-      ),
+      draft(type: TransactionType.transfer, categoryId: null, toAccountId: 1),
     );
     expect(errorsOf(result.failureOrNull), contains('toAccount'));
   });
@@ -145,7 +141,9 @@ void main() {
     expect(page2.dataOrNull, hasLength(5));
     expect(count.dataOrNull, 12);
     expect(
-      page1.dataOrNull!.map((t) => t.id).toSet()
+      page1.dataOrNull!
+          .map((t) => t.id)
+          .toSet()
           .intersection(page2.dataOrNull!.map((t) => t.id).toSet()),
       isEmpty,
     );
