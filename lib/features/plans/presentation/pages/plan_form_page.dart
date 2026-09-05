@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/enums/plan_status.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/form_fields.dart';
 import '../../../transactions/presentation/widgets/picker_sheets.dart';
 import '../controllers/plan_form_controller.dart';
-import '../../../../core/theme/app_spacing.dart';
 
 class PlanFormPage extends GetView<PlanFormController> {
   const PlanFormPage({super.key});
@@ -38,22 +38,43 @@ class PlanFormPage extends GetView<PlanFormController> {
                 AppSpacing.gapBase,
                 Obx(
                   () => AmountField(
-                    controller: controller.limitField,
-                    label: 'Total spending limit',
+                    controller: controller.incomeField,
+                    label: 'Expected income this month',
                     errorText: controller.fieldErrors['totalLimit'],
                   ),
                 ),
                 AppSpacing.gapBase,
                 Obx(
                   () => AppPickerField(
-                    label: 'Plan period',
-                    value:
-                        '${AppDate.formatDate(controller.startDate.value)}'
-                        ' – ${AppDate.formatDate(controller.endDate.value)}',
-                    trailingIcon: Icons.date_range_rounded,
-                    onTap: () => _pickRange(context),
+                    label: 'Month',
+                    value: AppDate.formatMonth(controller.selectedMonth),
+                    trailingIcon: Icons.calendar_month_rounded,
+                    onTap: () => _pickMonth(context),
                   ),
                 ),
+                // Offered only when there is something to copy.
+                Obx(() {
+                  final template = controller.template.value;
+                  if (template == null || controller.isEditing) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.sm),
+                    child: SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      value: controller.copyPrevious.value,
+                      onChanged: controller.toggleCopyPrevious,
+                      title: const Text('Start from the last plan'),
+                      subtitle: Text(
+                        'Copies the categories and planned amounts from '
+                        '${template.name}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
                 AppSpacing.gapBase,
                 if (controller.isEditing)
                   Obx(
@@ -120,17 +141,18 @@ class PlanFormPage extends GetView<PlanFormController> {
     );
   }
 
-  Future<void> _pickRange(BuildContext context) async {
+  /// Month, not an arbitrary range: a plan is only comparable to the next one
+  /// if both cover the same kind of period.
+  Future<void> _pickMonth(BuildContext context) async {
     final now = DateTime.now();
-    final picked = await showDateRangePicker(
+    final picked = await showDatePicker(
       context: context,
+      initialDate: controller.selectedMonth,
       firstDate: DateTime(now.year - 5),
       lastDate: DateTime(now.year + 5, 12, 31),
-      initialDateRange: DateTimeRange(
-        start: controller.startDate.value,
-        end: controller.endDate.value,
-      ),
+      initialDatePickerMode: DatePickerMode.year,
+      helpText: 'Select any day in the month to plan',
     );
-    if (picked != null) controller.selectRange(picked.start, picked.end);
+    if (picked != null) controller.selectMonth(picked);
   }
 }

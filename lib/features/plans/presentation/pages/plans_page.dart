@@ -27,6 +27,11 @@ class PlansPage extends GetView<PlansController> {
         title: const Text('Spending plans'),
         actions: [
           IconButton(
+            tooltip: 'New plan',
+            onPressed: _openForm,
+            icon: const Icon(Icons.add_rounded),
+          ),
+          IconButton(
             tooltip: 'Budgets',
             onPressed: () => Get.toNamed(AppRoutes.budgets),
             icon: const Icon(Icons.pie_chart_outline_rounded),
@@ -37,11 +42,6 @@ class PlansPage extends GetView<PlansController> {
             icon: const Icon(Icons.flag_outlined),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openForm,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Plan'),
       ),
       body: ContentWidth(
         child: RefreshIndicator.adaptive(
@@ -181,7 +181,7 @@ class _PlanTile extends StatelessWidget {
           ),
           AppSpacing.hGapSm,
           Text(
-            Money.compact(plan.totalLimit),
+            Money.compact(plan.expectedIncome),
             style: theme.textTheme.titleSmall,
           ),
           PopupMenuButton<String>(

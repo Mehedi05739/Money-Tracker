@@ -18,4 +18,18 @@ abstract class SpendingPlanRepository {
 
   /// Progress for the plan covering today, if there is one.
   Future<Result<SpendingPlanProgress?>> getCurrentProgress();
+
+  /// The most recent plan that ended before [before], if any.
+  ///
+  /// Used to offer last month's plan as a starting point.
+  Future<Result<SpendingPlan?>> getPreviousPlan(DateTime before);
+
+  /// Creates [plan] and copies every category allocation from [sourcePlanId].
+  ///
+  /// The plan and its items are written in one SQL transaction: a plan that
+  /// half-copied would silently under-report what the user had allocated.
+  Future<Result<SpendingPlan>> createFromTemplate({
+    required SpendingPlan plan,
+    required int sourcePlanId,
+  });
 }

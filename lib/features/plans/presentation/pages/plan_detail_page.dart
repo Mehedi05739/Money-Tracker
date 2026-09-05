@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/base/view_state.dart';
+import '../../../../core/enums/spending_warning.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_radius.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -19,7 +21,6 @@ import '../../../../routes/app_routes.dart';
 import '../../../dashboard/presentation/widgets/plan_progress_card.dart';
 import '../../../transactions/presentation/widgets/picker_sheets.dart';
 import '../controllers/plan_detail_controller.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 
 class PlanDetailPage extends GetView<PlanDetailController> {
@@ -117,6 +118,29 @@ class _DetailBody extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: PlanProgressCard(progress: progress),
           ),
+          // Escalating notice as the plan itself crosses each threshold.
+          if (progress.warning.shouldWarn)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.base,
+                AppSpacing.md,
+                AppSpacing.base,
+                0,
+              ),
+              child: _Banner(
+                icon: progress.isExceeded
+                    ? Icons.error_outline_rounded
+                    : Icons.warning_amber_rounded,
+                color: _colorFor(context, progress.warning),
+                message: progress.isExceeded
+                    ? 'You have spent '
+                          '${Money.format(progress.totalSpent - progress.expectedIncome)} '
+                          'more than this plan allows.'
+                    : '${progress.usagePercent.toStringAsFixed(0)}% of this '
+                          'plan is spent, with '
+                          '${Money.format(progress.remaining)} left.',
+              ),
+            ),
           if (progress.isOverAllocated)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -124,8 +148,8 @@ class _DetailBody extends StatelessWidget {
                 icon: Icons.warning_amber_rounded,
                 color: context.warningColor,
                 message:
-                    'Allocations exceed the plan limit by '
-                    '${Money.format(progress.totalPlanned - progress.totalLimit)}.',
+                    'You have planned more than you expect to earn, by '
+                    '${Money.format(progress.totalPlanned - progress.expectedIncome)}.',
               ),
             ),
           if (progress.unallocated > 0)
@@ -135,7 +159,7 @@ class _DetailBody extends StatelessWidget {
                 icon: Icons.info_outline_rounded,
                 color: theme.colorScheme.primary,
                 message:
-                    '${Money.format(progress.unallocated)} of the limit is not '
+                    '${Money.format(progress.unallocated)} of your income is not '
                     'assigned to a category yet.',
               ),
             ),
@@ -145,7 +169,7 @@ class _DetailBody extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: AppCard(
                 child: Text(
-                  'Nothing allocated yet. Split your limit across categories '
+                  'Nothing allocated yet. Split your income across categories '
                   'to see planned versus actual spending.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
@@ -165,6 +189,10 @@ class _DetailBody extends StatelessWidget {
   }
 }
 
+/// One category: planned, spent, remaining and percentage used.
+///
+/// All four are shown together because each answers a different question —
+/// what I meant to spend, what I have spent, what is left, and how close I am.
 class _AllocationCard extends StatelessWidget {
   const _AllocationCard({required this.progress, required this.controller});
 
@@ -175,15 +203,12 @@ class _AllocationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final item = progress.item;
-    final statusColor = progress.isExceeded
-        ? context.expenseColor
-        : progress.isAtRisk
-        ? context.warningColor
-        : theme.colorScheme.primary;
+    final warning = progress.warning;
+    final statusColor = _colorFor(context, warning);
 
     return AppCard(
-      padding: const EdgeInsets.all(14),
-      onTap: () => _edit(),
+      padding: AppSpacing.cardCompact,
+      onTap: _edit,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -204,10 +229,7 @@ class _AllocationCard extends StatelessWidget {
                   style: theme.textTheme.titleSmall,
                 ),
               ),
-              Text(
-                '${Money.format(progress.spent)} / ${Money.format(progress.planned)}',
-                style: theme.textTheme.titleSmall?.copyWith(color: statusColor),
-              ),
+              if (warning.shouldWarn) _WarningChip(warning: warning),
               PopupMenuButton<String>(
                 icon: Icon(
                   Icons.more_vert_rounded,
@@ -227,16 +249,44 @@ class _AllocationCard extends StatelessWidget {
           AppProgressBar(
             value: progress.usageFraction,
             exceeded: progress.isExceeded,
+            warningThreshold: SpendingWarning.approachingAt / 100,
             height: 6,
           ),
-          AppSpacing.gapSm,
-          Text(
-            progress.isExceeded
-                ? '${Money.format(progress.spent - progress.planned)} over plan'
-                : '${Money.format(progress.remaining)} left',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+          AppSpacing.gapMd,
+          Row(
+            children: [
+              Expanded(
+                child: _Figure(
+                  label: 'Planned',
+                  value: Money.format(progress.planned),
+                ),
+              ),
+              Expanded(
+                child: _Figure(
+                  label: 'Spent',
+                  value: Money.format(progress.spent),
+                  color: statusColor,
+                ),
+              ),
+              Expanded(
+                child: _Figure(
+                  label: progress.isExceeded ? 'Over by' : 'Remaining',
+                  value: Money.format(
+                    progress.isExceeded
+                        ? progress.overspend
+                        : progress.remaining,
+                  ),
+                  color: progress.isExceeded ? context.expenseColor : null,
+                ),
+              ),
+              Expanded(
+                child: _Figure(
+                  label: 'Used',
+                  value: '${progress.usagePercent.toStringAsFixed(0)}%',
+                  color: statusColor,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -257,13 +307,87 @@ class _AllocationCard extends StatelessWidget {
     final confirmed = await ConfirmDialog.show(
       title: 'Remove allocation?',
       message:
-          '${progress.item.displayName} will no longer be tracked in '
-          'this plan. Your transactions are not affected.',
+          '${progress.item.displayName} will no longer be tracked in this '
+          'plan. Your transactions are not affected.',
       confirmLabel: 'Remove',
     );
     if (confirmed) await controller.removeAllocation(progress.item);
   }
 }
+
+/// One of the four figures under a category.
+class _Figure extends StatelessWidget {
+  const _Figure({required this.label, required this.value, this.color});
+
+  final String label;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontSize: 11,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        AppSpacing.gapXxs,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: theme.textTheme.titleSmall?.copyWith(color: color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Names the threshold a category has crossed.
+class _WarningChip extends StatelessWidget {
+  const _WarningChip({required this.warning});
+
+  final SpendingWarning warning;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = _colorFor(context, warning);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.13),
+        borderRadius: AppRadius.xsAll,
+      ),
+      child: Text(
+        warning.shortLabel,
+        style: theme.textTheme.labelSmall?.copyWith(color: color),
+      ),
+    );
+  }
+}
+
+/// Escalating colour as the thresholds are crossed.
+Color _colorFor(BuildContext context, SpendingWarning warning) =>
+    switch (warning) {
+      SpendingWarning.none => Theme.of(context).colorScheme.primary,
+      SpendingWarning.approaching => context.warningColor,
+      SpendingWarning.critical => context.warningColor,
+      SpendingWarning.atLimit => context.expenseColor,
+      SpendingWarning.exceeded => context.expenseColor,
+    };
 
 /// Small amount-entry dialog shared by add and edit.
 class _AllocationDialog extends StatefulWidget {

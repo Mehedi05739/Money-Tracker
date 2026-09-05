@@ -10,7 +10,9 @@ class SpendingPlanMapper {
   static SpendingPlan fromRow(Map<String, Object?> row) => SpendingPlan(
     id: row.readInt(SpendingPlanColumns.id),
     name: row.readString(SpendingPlanColumns.name),
-    totalLimit: row.readDouble(SpendingPlanColumns.totalLimit),
+    // `total_limit` shipped before the field had a name; the domain calls it
+    // expected income, and this is the only place the two meet.
+    expectedIncome: row.readDouble(SpendingPlanColumns.totalLimit),
     startDate: row.readDate(SpendingPlanColumns.startDate),
     endDate: row.readDate(SpendingPlanColumns.endDate),
     status: PlanStatus.fromName(row[SpendingPlanColumns.status] as String?),
@@ -26,7 +28,7 @@ class SpendingPlanMapper {
     return {
       if (includeId) SpendingPlanColumns.id: plan.id,
       SpendingPlanColumns.name: plan.name.trim(),
-      SpendingPlanColumns.totalLimit: plan.totalLimit,
+      SpendingPlanColumns.totalLimit: plan.expectedIncome,
       SpendingPlanColumns.startDate: AppDate.toDb(plan.startDate),
       SpendingPlanColumns.endDate: AppDate.toDb(plan.endDate),
       SpendingPlanColumns.status: plan.status.name,

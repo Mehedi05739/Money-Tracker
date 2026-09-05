@@ -1,3 +1,4 @@
+import '../../core/enums/spending_warning.dart';
 import 'spending_plan.dart';
 
 /// Actual-versus-planned for one line of a spending plan.
@@ -13,7 +14,14 @@ class SpendingPlanItemProgress {
   double get usageFraction => (usagePercent / 100).clamp(0.0, 1.0);
 
   bool get isExceeded => spent > planned;
-  bool get isAtRisk => !isExceeded && usagePercent >= 80;
+
+  /// Which threshold this category has crossed.
+  SpendingWarning get warning => SpendingWarning.fromPercent(usagePercent);
+
+  bool get isAtRisk => warning.shouldWarn && !isExceeded;
+
+  /// Amount spent beyond the plan, or zero.
+  double get overspend => spent > planned ? spent - planned : 0;
 }
 
 /// Roll-up for a whole plan, including spending that fell outside any
@@ -33,23 +41,37 @@ class SpendingPlanProgress {
   /// All expense spending in the plan window, allocated or not.
   final double totalSpent;
 
-  double get totalLimit => plan.totalLimit;
+  /// The income the plan is built against.
+  double get expectedIncome => plan.expectedIncome;
 
   double get totalPlanned => items.fold(0, (sum, item) => sum + item.planned);
 
-  /// Limit not yet assigned to any category.
-  double get unallocated => totalLimit - totalPlanned;
+  /// Income not yet assigned to any category — what is still free to plan.
+  double get unallocated => expectedIncome - totalPlanned;
 
-  double get remaining => totalLimit - totalSpent;
+  /// Income left after what has actually been spent.
+  double get remaining => expectedIncome - totalSpent;
 
   double get usagePercent =>
-      totalLimit <= 0 ? 0 : (totalSpent / totalLimit) * 100;
+      expectedIncome <= 0 ? 0 : (totalSpent / expectedIncome) * 100;
 
   double get usageFraction => (usagePercent / 100).clamp(0.0, 1.0);
 
-  bool get isExceeded => totalSpent > totalLimit;
-  bool get isAtRisk => !isExceeded && usagePercent >= 80;
-  bool get isOverAllocated => totalPlanned > totalLimit;
+  bool get isExceeded => totalSpent > expectedIncome;
+
+  SpendingWarning get warning => SpendingWarning.fromPercent(usagePercent);
+
+  bool get isAtRisk => warning.shouldWarn && !isExceeded;
+
+  /// The categories add up to more than the user expects to receive.
+  bool get isOverAllocated => totalPlanned > expectedIncome;
+
+  /// Categories that have crossed a threshold, closest to the edge first.
+  List<SpendingPlanItemProgress> get warningItems {
+    final flagged = items.where((item) => item.warning.shouldWarn).toList()
+      ..sort((a, b) => b.usagePercent.compareTo(a.usagePercent));
+    return flagged;
+  }
 
   List<SpendingPlanItemProgress> get breachedItems =>
       items.where((item) => item.isExceeded).toList();
@@ -61,8 +83,8 @@ class SpendingPlanProgress {
   }
 
   String get headline {
-    if (isExceeded) return 'Limit exceeded';
-    if (isAtRisk) return 'Close to limit';
+    if (isExceeded) return 'Over plan';
+    if (isAtRisk) return warning.label;
     return 'Within plan';
   }
 }

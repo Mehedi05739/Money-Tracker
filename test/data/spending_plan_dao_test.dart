@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:money_tracker/core/enums/spending_warning.dart';
 import 'package:money_tracker/core/enums/transaction_type.dart';
 import 'package:money_tracker/core/utils/date_range.dart';
 import 'package:money_tracker/data/local/daos/spending_plan_dao.dart';
@@ -26,7 +27,7 @@ void main() {
       SpendingPlan(
         id: 0,
         name: 'September',
-        totalLimit: limit,
+        expectedIncome: limit,
         startDate: range.start,
         endDate: range.end,
         createdAt: now,
@@ -123,7 +124,8 @@ void main() {
 
     expect(progress.isExceeded, isTrue);
     expect(progress.usageFraction, 1.0);
-    expect(progress.headline, 'Limit exceeded');
+    expect(progress.headline, 'Over plan');
+    expect(progress.warning, SpendingWarning.exceeded);
     expect(progress.safeDailyAllowance, 0);
   });
 

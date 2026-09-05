@@ -68,7 +68,7 @@ class PlanProgressCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 3),
                 child: Text(
-                  'of ${Money.format(progress.totalLimit)}',
+                  'of ${Money.format(progress.expectedIncome)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

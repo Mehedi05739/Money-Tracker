@@ -184,6 +184,30 @@ AppDatabase → SQLite
   state — the currency symbol lives in an injected `CurrencyFormatter`, not a
   global, so it has one source of truth and resets with `Get.reset()`.
 
+## Spending plans
+
+A plan answers "how much can I spend before I spend it". The user sets the
+income they expect for a month and splits it across categories; **actual
+spending is never entered** — it comes from the transactions already recorded,
+matched by category within the plan's month.
+
+`expectedIncome` is the plan's ceiling. It maps to the `total_limit` column,
+which shipped before the concept had a name; `SpendingPlanMapper` is the only
+place the two meet.
+
+- `unallocated` = income − planned — what is still free to assign
+- `remaining` = income − spent — what is left to spend
+- Per category: planned, spent, remaining and percentage used
+
+`SpendingWarning` classifies consumption at the thresholds the brief calls for:
+70%, 90%, 100%, and beyond. It drives the chip, the bar colour and the
+plan-level banner, so one rule decides all three rather than each widget
+picking its own cutoff.
+
+Copying last month's plan writes the plan and every allocation in **one SQL
+transaction** — a half-copied plan would understate what the user had
+allocated, and they would have no way to notice.
+
 ## Transactions
 
 **Search** covers title, note, description and category name. Category matching

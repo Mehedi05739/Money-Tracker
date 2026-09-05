@@ -18,7 +18,7 @@ class PlanFormController extends GetxController {
   final AppEvents _events;
 
   final TextEditingController nameField = TextEditingController();
-  final TextEditingController limitField = TextEditingController();
+  final TextEditingController incomeField = TextEditingController();
   final TextEditingController noteField = TextEditingController();
 
   final Rx<DateTime> startDate = DateTime.now().obs;
@@ -35,12 +35,13 @@ class PlanFormController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _loadTemplate();
 
     final argument = Get.arguments;
     if (argument is SpendingPlan) {
       _editing = argument;
       nameField.text = argument.name;
-      limitField.text = argument.totalLimit.toStringAsFixed(2);
+      incomeField.text = argument.expectedIncome.toStringAsFixed(2);
       noteField.text = argument.note ?? '';
       startDate.value = argument.startDate;
       endDate.value = argument.endDate;
@@ -52,18 +53,41 @@ class PlanFormController extends GetxController {
     }
   }
 
+  /// Looks for the most recent finished plan so its allocations can be reused.
+  Future<void> _loadTemplate() async {
+    final result = await _repository.getPreviousPlan(startDate.value);
+    template.value = result.dataOrNull;
+  }
+
   @override
   void onClose() {
     nameField.dispose();
-    limitField.dispose();
+    incomeField.dispose();
     noteField.dispose();
     super.onClose();
   }
 
-  void selectRange(DateTime start, DateTime end) {
-    startDate.value = AppDate.startOfDay(start);
-    endDate.value = AppDate.endOfDay(end);
+  /// Plans run for a calendar month, so the form picks a month rather than an
+  /// arbitrary range — "1st to the 30th" is the only range that makes a
+  /// monthly plan comparable to the next one.
+  void selectMonth(DateTime month) {
+    startDate.value = AppDate.startOfMonth(month);
+    endDate.value = AppDate.endOfMonth(month);
   }
+
+  DateTime get selectedMonth => startDate.value;
+
+  /// Whether a plan already exists for the chosen month, to warn before a
+  /// second overlapping plan is created.
+  final RxnString monthConflict = RxnString();
+
+  /// The previous plan offered as a starting point, if there is one.
+  final Rxn<SpendingPlan> template = Rxn<SpendingPlan>();
+
+  /// Copy last month's allocations into the new plan when saving.
+  final RxBool copyPrevious = false.obs;
+
+  void toggleCopyPrevious(bool value) => copyPrevious.value = value;
 
   void changeStatus(PlanStatus value) => status.value = value;
 
@@ -72,13 +96,13 @@ class PlanFormController extends GetxController {
 
     fieldErrors.clear();
     final nameError = Validators.name(nameField.text, field: 'Plan name');
-    final limitError = Validators.amount(
-      limitField.text,
-      field: 'Spending limit',
+    final incomeError = Validators.amount(
+      incomeField.text,
+      field: 'Expected income',
     );
 
     if (nameError != null) fieldErrors['name'] = nameError;
-    if (limitError != null) fieldErrors['totalLimit'] = limitError;
+    if (incomeError != null) fieldErrors['expectedIncome'] = incomeError;
     if (fieldErrors.isNotEmpty) return null;
 
     isSubmitting.value = true;
@@ -88,8 +112,8 @@ class PlanFormController extends GetxController {
     final draft = SpendingPlan(
       id: _editing?.id ?? 0,
       name: nameField.text.trim(),
-      totalLimit: Validators.normalizeAmount(
-        Validators.parseAmount(limitField.text) ?? 0,
+      expectedIncome: Validators.normalizeAmount(
+        Validators.parseAmount(incomeField.text) ?? 0,
       ),
       startDate: startDate.value,
       endDate: endDate.value,
@@ -99,8 +123,14 @@ class PlanFormController extends GetxController {
       updatedAt: now,
     );
 
+    final source = template.value;
     final result = isEditing
         ? await _repository.update(draft)
+        : (copyPrevious.value && source != null)
+        ? await _repository.createFromTemplate(
+            plan: draft,
+            sourcePlanId: source.id,
+          )
         : await _repository.create(draft);
     isSubmitting.value = false;
 

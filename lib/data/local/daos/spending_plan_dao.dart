@@ -49,6 +49,58 @@ class SpendingPlanDao {
     return rows.isEmpty ? null : SpendingPlanMapper.fromRow(rows.first);
   }
 
+  /// The latest plan that finished before [before].
+  Future<SpendingPlan?> findPrevious(DateTime before) async {
+    final rows = await _db.query(
+      Tables.spendingPlans,
+      where: '${SpendingPlanColumns.endDate} < ?',
+      whereArgs: [AppDate.toDb(before)],
+      orderBy: '${SpendingPlanColumns.endDate} DESC',
+      limit: 1,
+    );
+    return rows.isEmpty ? null : SpendingPlanMapper.fromRow(rows.first);
+  }
+
+  /// Inserts [plan] and copies every allocation from [sourcePlanId].
+  ///
+  /// One SQL transaction: a partially copied plan would understate what the
+  /// user had allocated, and they would have no way to tell.
+  Future<int> insertCopy({
+    required SpendingPlan plan,
+    required int sourcePlanId,
+  }) {
+    return _db.transaction((txn) async {
+      final planId = await txn.insert(
+        Tables.spendingPlans,
+        SpendingPlanMapper.toRow(plan),
+      );
+
+      final source = await txn.query(
+        Tables.spendingPlanItems,
+        where: '${SpendingPlanItemColumns.planId} = ?',
+        whereArgs: [sourcePlanId],
+      );
+
+      final now = AppDate.toDb(DateTime.now());
+      final batch = txn.batch();
+      for (final row in source) {
+        batch.insert(Tables.spendingPlanItems, {
+          SpendingPlanItemColumns.planId: planId,
+          SpendingPlanItemColumns.categoryId:
+              row[SpendingPlanItemColumns.categoryId],
+          SpendingPlanItemColumns.plannedAmount:
+              row[SpendingPlanItemColumns.plannedAmount],
+          SpendingPlanItemColumns.note: row[SpendingPlanItemColumns.note],
+          SpendingPlanItemColumns.createdAt: now,
+          SpendingPlanItemColumns.updatedAt: now,
+        });
+      }
+      await batch.commit(noResult: true);
+
+      return planId;
+    });
+  }
+
   Future<int> insert(SpendingPlan plan) =>
       _db.insert(Tables.spendingPlans, SpendingPlanMapper.toRow(plan));
 

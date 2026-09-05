@@ -5,7 +5,7 @@ class SpendingPlan {
   const SpendingPlan({
     required this.id,
     required this.name,
-    required this.totalLimit,
+    required this.expectedIncome,
     required this.startDate,
     required this.endDate,
     this.status = PlanStatus.active,
@@ -19,7 +19,7 @@ class SpendingPlan {
     return SpendingPlan(
       id: 0,
       name: '',
-      totalLimit: 0,
+      expectedIncome: 0,
       startDate: range.start,
       endDate: range.end,
       createdAt: DateTime.now(),
@@ -29,7 +29,13 @@ class SpendingPlan {
 
   final int id;
   final String name;
-  final double totalLimit;
+
+  /// What the user expects to receive this period, and therefore the most
+  /// their categories can add up to.
+  ///
+  /// Stored in the `total_limit` column, which shipped before the concept had
+  /// a name; the mapper keeps that mapping in one place.
+  final double expectedIncome;
   final DateTime startDate;
   final DateTime endDate;
   final PlanStatus status;
@@ -50,7 +56,7 @@ class SpendingPlan {
   SpendingPlan copyWith({
     int? id,
     String? name,
-    double? totalLimit,
+    double? expectedIncome,
     DateTime? startDate,
     DateTime? endDate,
     PlanStatus? status,
@@ -59,7 +65,7 @@ class SpendingPlan {
   }) => SpendingPlan(
     id: id ?? this.id,
     name: name ?? this.name,
-    totalLimit: totalLimit ?? this.totalLimit,
+    expectedIncome: expectedIncome ?? this.expectedIncome,
     startDate: startDate ?? this.startDate,
     endDate: endDate ?? this.endDate,
     status: status ?? this.status,

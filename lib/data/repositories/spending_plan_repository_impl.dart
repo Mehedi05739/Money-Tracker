@@ -51,6 +51,26 @@ class SpendingPlanRepositoryImpl implements SpendingPlanRepository {
       guard(() => _dao.delete(id), context: 'deletePlan');
 
   @override
+  Future<Result<SpendingPlan?>> getPreviousPlan(DateTime before) =>
+      guard(() => _dao.findPrevious(before), context: 'previousPlan');
+
+  @override
+  Future<Result<SpendingPlan>> createFromTemplate({
+    required SpendingPlan plan,
+    required int sourcePlanId,
+  }) async {
+    final invalid = _validatePlan(plan);
+    if (invalid != null) return Result.error(invalid);
+
+    return guard(() async {
+      final id = await _dao.insertCopy(plan: plan, sourcePlanId: sourcePlanId);
+      final created = await _dao.findById(id);
+      if (created == null) throw StateError('Plan $id missing after copy');
+      return created;
+    }, context: 'copyPlan');
+  }
+
+  @override
   Future<Result<List<SpendingPlanItem>>> getItems(int planId) =>
       guard(() => _dao.findItems(planId), context: 'planItems');
 
@@ -118,10 +138,10 @@ class SpendingPlanRepositoryImpl implements SpendingPlanRepository {
     final nameError = Validators.name(plan.name, field: 'Plan name');
     if (nameError != null) errors['name'] = nameError;
 
-    if (plan.totalLimit <= 0) {
-      errors['totalLimit'] = 'Spending limit must be greater than zero';
-    } else if (plan.totalLimit > Validators.maxAmount) {
-      errors['totalLimit'] = 'Spending limit is too large';
+    if (plan.expectedIncome <= 0) {
+      errors['expectedIncome'] = 'Spending limit must be greater than zero';
+    } else if (plan.expectedIncome > Validators.maxAmount) {
+      errors['expectedIncome'] = 'Spending limit is too large';
     }
 
     if (plan.endDate.isBefore(plan.startDate)) {
