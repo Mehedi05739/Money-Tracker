@@ -3,7 +3,8 @@ import 'package:get/get.dart';
 
 import '../../../../core/base/view_state.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/date_utils.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_empty_view.dart';
@@ -15,8 +16,6 @@ import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../domain/entities/budget_status.dart';
 import '../../../../routes/app_routes.dart';
 import '../controllers/budgets_controller.dart';
-import '../../../../core/theme/app_radius.dart';
-import '../../../../core/theme/app_spacing.dart';
 
 class BudgetsPage extends GetView<BudgetsController> {
   const BudgetsPage({super.key});
@@ -156,6 +155,11 @@ class _BudgetList extends StatelessWidget {
   }
 }
 
+/// One budget: amount, spend, remaining, days left and what can safely be
+/// spent per day.
+///
+/// All five are shown together because a budget is only actionable when the
+/// user can see the number *and* the time left to spend it in.
 class _BudgetCard extends StatelessWidget {
   const _BudgetCard({required this.status, required this.controller});
 
@@ -166,119 +170,134 @@ class _BudgetCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final budget = status.budget;
-    final statusColor = status.isExceeded
+    final paused = status.isPaused;
+
+    final statusColor = paused
+        ? theme.colorScheme.onSurfaceVariant
+        : status.isExceeded
         ? context.expenseColor
         : status.isAtRisk || status.isOverPace
         ? context.warningColor
         : theme.colorScheme.primary;
 
-    return AppCard(
-      onTap: () async {
-        final saved = await Get.toNamed(
-          AppRoutes.budgetForm,
-          arguments: budget,
-        );
-        if (saved == true) await controller.load(showLoader: false);
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CategoryAvatar(
-                icon: budget.categoryIcon,
-                color: budget.categoryColor,
-                seed: budget.categoryId ?? 0,
-                size: 38,
-                overrideIcon: budget.isOverall
-                    ? Icons.all_inclusive_rounded
-                    : null,
-              ),
-              AppSpacing.hGapMd,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      budget.displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall,
-                    ),
-                    AppSpacing.gapXxs,
-                    Text(
-                      '${budget.period.label} · '
-                      '${AppDate.formatDate(budget.startDate)} – '
-                      '${AppDate.formatDate(budget.endDate)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+    return Opacity(
+      // A paused budget is still readable, just visibly out of play.
+      opacity: paused ? 0.6 : 1,
+      child: AppCard(
+        onTap: () async {
+          final saved = await Get.toNamed(
+            AppRoutes.budgetForm,
+            arguments: budget,
+          );
+          if (saved == true) await controller.load(showLoader: false);
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CategoryAvatar(
+                  icon: budget.categoryIcon,
+                  color: budget.categoryColor,
+                  seed: budget.categoryId ?? 0,
+                  size: 38,
+                  overrideIcon: budget.isOverall
+                      ? Icons.all_inclusive_rounded
+                      : null,
+                ),
+                AppSpacing.hGapMd,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        budget.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall,
                       ),
+                      AppSpacing.gapXxs,
+                      Text(
+                        '${Money.format(status.limit)} · ${budget.period.label}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _StatusPill(label: status.headline, color: statusColor),
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert_rounded,
+                    size: 20,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  onSelected: (action) => switch (action) {
+                    'pause' => controller.setActive(status, false),
+                    'resume' => controller.setActive(status, true),
+                    _ => _confirmDelete(),
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: paused ? 'resume' : 'pause',
+                      child: Text(paused ? 'Resume' : 'Pause'),
                     ),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
                   ],
                 ),
-              ),
-              PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.more_vert_rounded,
-                  size: 20,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                onSelected: (_) => _confirmDelete(),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'delete', child: Text('Delete')),
-                ],
-              ),
-            ],
-          ),
-          AppSpacing.gapMd,
-          Row(
-            children: [
-              Text(
-                Money.format(status.spent),
-                style: theme.textTheme.titleLarge?.copyWith(color: statusColor),
-              ),
-              AppSpacing.hGapSm,
-              Text(
-                'of ${Money.format(status.limit)}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.13),
-                  borderRadius: AppRadius.xsAll,
-                ),
-                child: Text(
-                  status.headline,
-                  style: theme.textTheme.labelSmall?.copyWith(
+              ],
+            ),
+            AppSpacing.gapMd,
+            AppProgressBar(
+              value: status.usageFraction,
+              exceeded: status.isExceeded,
+              warningThreshold: budget.alertPercentage / 100,
+              color: paused ? theme.colorScheme.outlineVariant : null,
+            ),
+            AppSpacing.gapMd,
+            Row(
+              children: [
+                Expanded(
+                  child: _Figure(
+                    label: 'Spent',
+                    value: Money.format(status.spent),
                     color: statusColor,
                   ),
                 ),
-              ),
-            ],
-          ),
-          AppSpacing.gapSm,
-          AppProgressBar(
-            value: status.usageFraction,
-            exceeded: status.isExceeded,
-            warningThreshold: budget.alertPercentage / 100,
-          ),
-          AppSpacing.gapSm,
-          Text(
-            status.isExceeded
-                ? '${Money.format(status.spent - status.limit)} over the limit'
-                : '${Money.format(status.remaining)} left · '
-                      '${Money.format(status.safeDailyAllowance)} a day to stay on track',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+                Expanded(
+                  child: _Figure(
+                    label: status.isExceeded ? 'Over by' : 'Remaining',
+                    value: Money.format(
+                      status.isExceeded ? status.overspend : status.remaining,
+                    ),
+                    color: status.isExceeded ? context.expenseColor : null,
+                  ),
+                ),
+                Expanded(
+                  child: _Figure(
+                    label: 'Days left',
+                    value: '${status.daysRemaining}',
+                  ),
+                ),
+                Expanded(
+                  child: _Figure(
+                    label: 'Per day',
+                    value: status.recommendedDailySpend > 0
+                        ? Money.compact(status.recommendedDailySpend)
+                        : '—',
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+            if (status.isExceeded && !paused) ...[
+              AppSpacing.gapMd,
+              _OverspendBanner(status: status),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -289,5 +308,107 @@ class _BudgetCard extends StatelessWidget {
       message: 'Your transactions stay — only the budget is removed.',
     );
     if (confirmed) await controller.delete(status);
+  }
+}
+
+/// One figure in the row beneath the progress bar.
+class _Figure extends StatelessWidget {
+  const _Figure({required this.label, required this.value, this.color});
+
+  final String label;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontSize: 11,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        AppSpacing.gapXxs,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: theme.textTheme.titleSmall?.copyWith(color: color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// States the overspend plainly, rather than leaving it to be inferred from a
+/// full progress bar.
+class _OverspendBanner extends StatelessWidget {
+  const _OverspendBanner({required this.status});
+
+  final BudgetStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.cardCompact,
+      decoration: BoxDecoration(
+        color: context.expenseColor.withValues(alpha: 0.1),
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.error_outline_rounded,
+            size: 17,
+            color: context.expenseColor,
+          ),
+          AppSpacing.hGapSm,
+          Expanded(
+            child: Text(
+              'Over budget by ${Money.format(status.overspend)}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: context.expenseColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 3,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.13),
+        borderRadius: AppRadius.xsAll,
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color),
+      ),
+    );
   }
 }

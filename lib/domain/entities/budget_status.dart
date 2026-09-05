@@ -1,3 +1,4 @@
+import '../../core/utils/date_utils.dart';
 import 'budget.dart';
 
 /// How a budget is tracking. [spent] comes from an indexed SQL aggregate over
@@ -22,12 +23,45 @@ class BudgetStatus {
   bool get isAtRisk => !isExceeded && usagePercent >= budget.alertPercentage;
   bool get isHealthy => !isExceeded && !isAtRisk;
 
-  /// What can still be spent per remaining day without breaching the limit.
-  double get safeDailyAllowance {
-    final daysLeft = budget.range.dayCount - budget.range.elapsedDays + 1;
-    if (daysLeft <= 0 || remaining <= 0) return 0;
-    return remaining / daysLeft;
+  /// Amount spent beyond the limit, or zero.
+  double get overspend => spent > limit ? spent - limit : 0;
+
+  /// Whole days left in the period, counting today.
+  ///
+  /// Today counts because the user can still act on it — a budget with one day
+  /// left is one they can still keep. Derived from the dates rather than from
+  /// elapsed days: `dayCount - elapsed + 1` reports 1 for a period that has
+  /// already ended, which would recommend spending the whole remaining balance
+  /// on a day outside the budget.
+  int get daysRemaining {
+    final now = DateTime.now();
+    if (now.isAfter(budget.endDate)) return 0;
+    if (now.isBefore(budget.startDate)) return budget.range.dayCount;
+    return AppDate.daysBetween(now, budget.endDate) + 1;
   }
+
+  int get daysElapsed =>
+      budget.range.elapsedDays.clamp(0, budget.range.dayCount);
+
+  /// What can still be spent each remaining day without breaching the limit.
+  ///
+  /// Zero once the budget is spent: there is no safe daily amount left to
+  /// recommend, and showing a small positive number would imply otherwise.
+  double get recommendedDailySpend {
+    if (daysRemaining <= 0 || remaining <= 0) return 0;
+    return remaining / daysRemaining;
+  }
+
+  /// Kept for callers that predate the rename.
+  double get safeDailyAllowance => recommendedDailySpend;
+
+  /// True once the period has finished.
+  bool get isFinished => DateTime.now().isAfter(budget.endDate);
+
+  /// True while the period has not started.
+  bool get isUpcoming => DateTime.now().isBefore(budget.startDate);
+
+  bool get isPaused => !budget.isActive;
 
   /// Spending pace against time elapsed. Above 1 means the user is burning the
   /// budget faster than the period is passing.
@@ -42,6 +76,7 @@ class BudgetStatus {
   bool get isOverPace => paceRatio > 1.1 && !isExceeded;
 
   String get headline {
+    if (isPaused) return 'Paused';
     if (isExceeded) return 'Over budget';
     if (isAtRisk) return 'Approaching limit';
     if (isOverPace) return 'Spending fast';

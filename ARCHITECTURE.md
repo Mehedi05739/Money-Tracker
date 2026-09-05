@@ -184,6 +184,27 @@ AppDatabase → SQLite
   state — the currency symbol lives in an injected `CurrencyFormatter`, not a
   global, so it has one source of truth and resets with `Get.reset()`.
 
+## Budgets
+
+A budget is a ceiling for a period: monthly, weekly, quarterly, yearly or a
+custom range, scoped to one category or to all expenses (`category_id IS
+NULL`). Spend is matched from transactions by category and date — nothing is
+entered by hand.
+
+Each budget reports amount, spend, remaining, percentage used, **days
+remaining** and a **recommended daily spend** (`remaining / daysRemaining`).
+`daysRemaining` is derived from the dates rather than from elapsed days:
+`dayCount - elapsed + 1` returns 1 for a period that has already ended, which
+would recommend spending the whole remaining balance on a day outside the
+budget.
+
+**Pausing** is its own write, not a full update — resuming should not risk
+rewriting a period the user did not mean to change. A paused budget keeps its
+history, raises no alerts and is excluded from roll-up totals, but stays
+visible on the budgets screen: one the user cannot see is one they cannot
+resume. `getStatuses(includePaused:)` is how each caller states which it wants;
+the dashboard leaves it off.
+
 ## Spending plans
 
 A plan answers "how much can I spend before I spend it". The user sets the

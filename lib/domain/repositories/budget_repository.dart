@@ -9,8 +9,23 @@ abstract class BudgetRepository {
   Future<Result<Budget>> update(Budget budget);
   Future<Result<void>> delete(int id);
 
+  /// Pauses or resumes a budget, leaving its amount and period untouched.
+  ///
+  /// A paused budget stops raising alerts and stops counting toward totals,
+  /// but keeps its history so resuming picks up where it left off.
+  Future<Result<void>> setActive(int id, bool active);
+
   /// Budgets paired with their spend, computed by a grouped aggregate rather
   /// than one query per budget.
-  Future<Result<List<BudgetStatus>>> getStatuses({bool currentOnly = true});
+  /// Budgets paired with their spend, computed by a grouped aggregate rather
+  /// than one query per budget.
+  ///
+  /// [includePaused] is for the budgets screen, which has to show paused
+  /// budgets so they can be resumed; the dashboard leaves it off so paused
+  /// budgets raise no alerts.
+  Future<Result<List<BudgetStatus>>> getStatuses({
+    bool currentOnly = true,
+    bool includePaused = false,
+  });
   Future<Result<BudgetStatus>> getStatus(int budgetId);
 }

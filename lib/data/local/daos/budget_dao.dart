@@ -53,6 +53,20 @@ class BudgetDao {
     );
   }
 
+  /// Pauses or resumes a budget without touching its amount or dates.
+  ///
+  /// A dedicated write rather than a full update: resuming should not risk
+  /// rewriting a period the user did not mean to change.
+  Future<int> setActive(int id, bool active) => _db.update(
+    Tables.budgets,
+    {
+      BudgetColumns.isActive: asDbBool(active),
+      BudgetColumns.updatedAt: AppDate.toDb(DateTime.now()),
+    },
+    where: '${BudgetColumns.id} = ?',
+    whereArgs: [id],
+  );
+
   Future<int> delete(int id) => _db.delete(
     Tables.budgets,
     where: '${BudgetColumns.id} = ?',
@@ -64,8 +78,14 @@ class BudgetDao {
   /// A correlated subquery keeps this to a single round trip instead of one
   /// aggregate query per budget, and works for both category-scoped budgets
   /// and the overall budget (`category_id IS NULL`).
-  Future<List<BudgetStatus>> findWithSpend({bool currentOnly = true}) async {
+  Future<List<BudgetStatus>> findWithSpend({
+    bool currentOnly = true,
+    bool includePaused = false,
+  }) async {
     final now = AppDate.toDb(DateTime.now());
+    // A paused budget the user cannot see is one they cannot resume, so the
+    // budgets screen asks for them; the dashboard does not.
+    final activeClause = includePaused ? '' : 'b.${BudgetColumns.isActive} = 1';
     final rows = await _db.rawQuery('''
       SELECT b.*,
              c.${CategoryColumns.name}  AS ${BudgetMapper.aliasCategoryName},
@@ -82,9 +102,7 @@ class BudgetDao {
              ), 0) AS spent
       FROM ${Tables.budgets} b
       LEFT JOIN ${Tables.categories} c ON c.${CategoryColumns.id} = b.${BudgetColumns.categoryId}
-      ${currentOnly ? '''WHERE b.${BudgetColumns.isActive} = 1
-        AND b.${BudgetColumns.startDate} <= ?
-        AND b.${BudgetColumns.endDate} >= ?''' : ''}
+      ${_whereFor(currentOnly: currentOnly, activeClause: activeClause)}
       ORDER BY b.${BudgetColumns.startDate} DESC, b.${BudgetColumns.id} DESC
       ''', currentOnly ? [now, now] : const []);
 
@@ -96,6 +114,21 @@ class BudgetDao {
           ),
         )
         .toList();
+  }
+
+  /// Builds the WHERE clause for [findWithSpend].
+  static String _whereFor({
+    required bool currentOnly,
+    required String activeClause,
+  }) {
+    final conditions = <String>[
+      if (activeClause.isNotEmpty) activeClause,
+      if (currentOnly) ...[
+        'b.${BudgetColumns.startDate} <= ?',
+        'b.${BudgetColumns.endDate} >= ?',
+      ],
+    ];
+    return conditions.isEmpty ? '' : 'WHERE ${conditions.join(' AND ')}';
   }
 
   Future<BudgetStatus?> findStatusById(int id) async {

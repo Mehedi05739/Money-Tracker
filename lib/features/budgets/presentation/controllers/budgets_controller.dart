@@ -15,13 +15,20 @@ class BudgetsController extends BaseController {
   final RxList<BudgetStatus> statuses = <BudgetStatus>[].obs;
   final RxBool currentOnly = true.obs;
 
+  /// Paused budgets are shown but excluded from the roll-up: a budget the
+  /// user has switched off should not count toward what they have committed.
+  List<BudgetStatus> get activeStatuses =>
+      statuses.where((status) => !status.isPaused).toList();
+
   double get totalBudgeted =>
-      statuses.fold(0, (sum, status) => sum + status.limit);
+      activeStatuses.fold(0, (sum, status) => sum + status.limit);
 
   double get totalSpent =>
-      statuses.fold(0, (sum, status) => sum + status.spent);
+      activeStatuses.fold(0, (sum, status) => sum + status.spent);
 
-  int get exceededCount => statuses.where((s) => s.isExceeded).length;
+  int get exceededCount => activeStatuses.where((s) => s.isExceeded).length;
+
+  int get pausedCount => statuses.where((s) => s.isPaused).length;
 
   Worker? _changeWorker;
 
@@ -48,19 +55,24 @@ class BudgetsController extends BaseController {
 
     final result = await _repository.getStatuses(
       currentOnly: currentOnly.value,
+      // Paused budgets stay on this screen: one the user cannot see is one
+      // they cannot resume.
+      includePaused: true,
     );
 
     result.fold(
       onSuccess: (data) {
         // Worst-tracking budgets first — that is what needs attention.
         statuses.assignAll(
-          [...data]..sort((a, b) => b.usagePercent.compareTo(a.usagePercent)),
+          // Worst-tracking first, with paused budgets after the live ones.
+          [...data]..sort((a, b) {
+            if (a.isPaused != b.isPaused) return a.isPaused ? 1 : -1;
+            return b.usagePercent.compareTo(a.usagePercent);
+          }),
         );
         data.isEmpty
             ? setEmpty(
-                currentOnly.value
-                    ? 'No active budgets for today'
-                    : 'No budgets yet',
+                currentOnly.value ? 'No budgets for today' : 'No budgets yet',
               )
             : setLoaded();
         return null;
@@ -77,6 +89,24 @@ class BudgetsController extends BaseController {
   void toggleScope() {
     currentOnly.toggle();
     load(showLoader: false);
+  }
+
+  /// Pauses or resumes a budget from the list, without opening the form.
+  Future<void> setActive(BudgetStatus status, bool active) async {
+    final result = await _repository.setActive(status.budget.id, active);
+
+    result.fold(
+      onSuccess: (_) {
+        _events.emit(DataChange.budgets);
+        AppSnackbar.success(active ? 'Budget resumed' : 'Budget paused');
+        load(showLoader: false);
+        return null;
+      },
+      onError: (failure) {
+        AppSnackbar.error(failure.message);
+        return null;
+      },
+    );
   }
 
   Future<void> delete(BudgetStatus status) async {

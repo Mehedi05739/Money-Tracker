@@ -57,11 +57,20 @@ class BudgetRepositoryImpl implements BudgetRepository {
       guard(() => _dao.delete(id), context: 'deleteBudget');
 
   @override
-  Future<Result<List<BudgetStatus>>> getStatuses({bool currentOnly = true}) =>
-      guard(
-        () => _dao.findWithSpend(currentOnly: currentOnly),
-        context: 'budgetStatuses',
-      );
+  Future<Result<void>> setActive(int id, bool active) =>
+      guard(() => _dao.setActive(id, active), context: 'toggleBudget');
+
+  @override
+  Future<Result<List<BudgetStatus>>> getStatuses({
+    bool currentOnly = true,
+    bool includePaused = false,
+  }) => guard(
+    () => _dao.findWithSpend(
+      currentOnly: currentOnly,
+      includePaused: includePaused,
+    ),
+    context: 'budgetStatuses',
+  );
 
   @override
   Future<Result<BudgetStatus>> getStatus(int budgetId) => guardFound(
