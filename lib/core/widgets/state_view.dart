@@ -29,12 +29,16 @@ class StateView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(
       () => switch (controller.state) {
-        IdleState() || LoadingState() =>
-          loadingBuilder?.call(context) ?? const AppLoader(),
-        EmptyState(:final message) =>
-          AppEmptyView(message: message, action: emptyAction),
-        ErrorState(:final message) =>
-          AppErrorView(message: message, onRetry: onRetry),
+        IdleState() ||
+        LoadingState() => loadingBuilder?.call(context) ?? const AppLoader(),
+        EmptyState(:final message) => AppEmptyView(
+          message: message,
+          action: emptyAction,
+        ),
+        ErrorState(:final message) => AppErrorView(
+          message: message,
+          onRetry: onRetry,
+        ),
         LoadedState() => builder(context),
       },
     );

@@ -36,8 +36,8 @@ class DashboardController extends BaseController {
   final GoalRepository _goals;
   final AppEvents _events;
 
-  final Rx<DateRange> range =
-      DateRange.fromPreset(DateRangePreset.thisMonth).obs;
+  final Rx<DateRange> range = DateRange.fromPreset(DateRangePreset.thisMonth)
+      .obs;
 
   final Rxn<DashboardSummary> summary = Rxn<DashboardSummary>();
   final RxList<MoneyTransaction> recent = <MoneyTransaction>[].obs;
@@ -63,8 +63,14 @@ class DashboardController extends BaseController {
     load();
 
     // The shell keeps this tab alive, so refresh when data changes elsewhere.
-    _changeWorker =
-        _events.listen(const [DataChange.transactions, DataChange.accounts, DataChange.budgets, DataChange.plans, DataChange.goals, DataChange.categories], () => load(showLoader: false));
+    _changeWorker = _events.listen(const [
+      DataChange.transactions,
+      DataChange.accounts,
+      DataChange.budgets,
+      DataChange.plans,
+      DataChange.goals,
+      DataChange.categories,
+    ], () => load(showLoader: false));
   }
 
   @override
@@ -89,8 +95,9 @@ class DashboardController extends BaseController {
     // Started together so the five reads overlap; awaited in order below.
     // The dashboard costs one round trip of wall time, not five.
     final summaryFuture = _analytics.getDashboardSummary(range.value);
-    final recentFuture =
-        _transactions.getRecent(limit: AppConstants.recentTransactionCount);
+    final recentFuture = _transactions.getRecent(
+      limit: AppConstants.recentTransactionCount,
+    );
     final budgetFuture = _budgets.getStatuses();
     final planFuture = _plans.getCurrentProgress();
     final goalFuture = _goals.getGoals(activeOnly: true);

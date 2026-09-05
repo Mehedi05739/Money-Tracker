@@ -19,6 +19,8 @@ import '../../../../routes/app_routes.dart';
 import '../../../dashboard/presentation/widgets/plan_progress_card.dart';
 import '../../../transactions/presentation/widgets/picker_sheets.dart';
 import '../controllers/plan_detail_controller.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class PlanDetailPage extends GetView<PlanDetailController> {
   const PlanDetailPage({super.key});
@@ -27,9 +29,7 @@ class PlanDetailPage extends GetView<PlanDetailController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Obx(
-          () => Text(controller.progress.value?.plan.name ?? 'Plan'),
-        ),
+        title: Obx(() => Text(controller.progress.value?.plan.name ?? 'Plan')),
         actions: [
           Obx(() {
             final plan = controller.progress.value?.plan;
@@ -60,8 +60,10 @@ class PlanDetailPage extends GetView<PlanDetailController> {
 
           return switch (state) {
             IdleState() || LoadingState() => const AppLoader(),
-            ErrorState(:final message) =>
-              AppErrorView(message: message, onRetry: controller.load),
+            ErrorState(:final message) => AppErrorView(
+              message: message,
+              onRetry: controller.load,
+            ),
             _ => _DetailBody(controller: controller),
           };
         }),
@@ -74,7 +76,8 @@ class PlanDetailPage extends GetView<PlanDetailController> {
     if (available.isEmpty) {
       await ConfirmDialog.show(
         title: 'Every category is allocated',
-        message: 'Edit an existing allocation instead, or add a new expense '
+        message:
+            'Edit an existing allocation instead, or add a new expense '
             'category first.',
         confirmLabel: 'OK',
         cancelLabel: 'Close',
@@ -120,7 +123,8 @@ class _DetailBody extends StatelessWidget {
               child: _Banner(
                 icon: Icons.warning_amber_rounded,
                 color: context.warningColor,
-                message: 'Allocations exceed the plan limit by '
+                message:
+                    'Allocations exceed the plan limit by '
                     '${Money.format(progress.totalPlanned - progress.totalLimit)}.',
               ),
             ),
@@ -153,10 +157,7 @@ class _DetailBody extends StatelessWidget {
             for (final item in progress.items)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: _AllocationCard(
-                  progress: item,
-                  controller: controller,
-                ),
+                child: _AllocationCard(progress: item, controller: controller),
               ),
         ],
       );
@@ -177,8 +178,8 @@ class _AllocationCard extends StatelessWidget {
     final statusColor = progress.isExceeded
         ? context.expenseColor
         : progress.isAtRisk
-            ? context.warningColor
-            : theme.colorScheme.primary;
+        ? context.warningColor
+        : theme.colorScheme.primary;
 
     return AppCard(
       padding: const EdgeInsets.all(14),
@@ -194,7 +195,7 @@ class _AllocationCard extends StatelessWidget {
                 seed: item.categoryId ?? 0,
                 size: 34,
               ),
-              const SizedBox(width: 10),
+              AppSpacing.hGapSm,
               Expanded(
                 child: Text(
                   item.displayName,
@@ -222,13 +223,13 @@ class _AllocationCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          AppSpacing.gapSm,
           AppProgressBar(
             value: progress.usageFraction,
             exceeded: progress.isExceeded,
             height: 6,
           ),
-          const SizedBox(height: 6),
+          AppSpacing.gapSm,
           Text(
             progress.isExceeded
                 ? '${Money.format(progress.spent - progress.planned)} over plan'
@@ -255,7 +256,8 @@ class _AllocationCard extends StatelessWidget {
   Future<void> _confirmRemove() async {
     final confirmed = await ConfirmDialog.show(
       title: 'Remove allocation?',
-      message: '${progress.item.displayName} will no longer be tracked in '
+      message:
+          '${progress.item.displayName} will no longer be tracked in '
           'this plan. Your transactions are not affected.',
       confirmLabel: 'Remove',
     );
@@ -361,16 +363,14 @@ class _Banner extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdAll,
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Icon(icon, size: 18, color: color),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(message, style: theme.textTheme.bodySmall),
-          ),
+          AppSpacing.hGapSm,
+          Expanded(child: Text(message, style: theme.textTheme.bodySmall)),
         ],
       ),
     );

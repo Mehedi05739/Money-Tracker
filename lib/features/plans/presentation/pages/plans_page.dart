@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/base/view_state.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/formatters.dart';
@@ -41,18 +43,22 @@ class PlansPage extends GetView<PlansController> {
         icon: const Icon(Icons.add_rounded),
         label: const Text('Plan'),
       ),
-      body: RefreshIndicator.adaptive(
-        onRefresh: controller.refreshData,
-        child: Obx(() {
-          final state = controller.state;
+      body: ContentWidth(
+        child: RefreshIndicator.adaptive(
+          onRefresh: controller.refreshData,
+          child: Obx(() {
+            final state = controller.state;
 
-          return switch (state) {
-            IdleState() || LoadingState() => const AppLoader(),
-            ErrorState(:final message) =>
-              AppErrorView(message: message, onRetry: controller.load),
-            EmptyState() => AppEmptyView(
+            return switch (state) {
+              IdleState() || LoadingState() => const AppLoader(),
+              ErrorState(:final message) => AppErrorView(
+                message: message,
+                onRetry: controller.load,
+              ),
+              EmptyState() => AppEmptyView(
                 title: 'No spending plans',
-                message: 'A plan sets a total limit for a period, then splits '
+                message:
+                    'A plan sets a total limit for a period, then splits '
                     'it across categories so you know what is left.',
                 icon: Icons.savings_outlined,
                 action: FilledButton.icon(
@@ -61,9 +67,10 @@ class PlansPage extends GetView<PlansController> {
                   label: const Text('Create a plan'),
                 ),
               ),
-            LoadedState() => _PlansBody(controller: controller),
-          };
-        }),
+              LoadedState() => _PlansBody(controller: controller),
+            };
+          }),
+        ),
       ),
     );
   }
@@ -82,7 +89,7 @@ class _PlansBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.only(bottom: 96),
+      padding: const EdgeInsets.only(bottom: AppSpacing.fabClearance),
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         Obx(() {
@@ -172,8 +179,11 @@ class _PlanTile extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 10),
-          Text(Money.compact(plan.totalLimit), style: theme.textTheme.titleSmall),
+          AppSpacing.hGapSm,
+          Text(
+            Money.compact(plan.totalLimit),
+            style: theme.textTheme.titleSmall,
+          ),
           PopupMenuButton<String>(
             icon: Icon(
               Icons.more_vert_rounded,
@@ -193,7 +203,8 @@ class _PlanTile extends StatelessWidget {
   Future<void> _confirmDelete() async {
     final confirmed = await ConfirmDialog.show(
       title: 'Delete ${plan.name}?',
-      message: 'The plan and its category allocations will be removed. '
+      message:
+          'The plan and its category allocations will be removed. '
           'Your transactions are not affected.',
     );
     if (confirmed) await controller.delete(plan);

@@ -103,10 +103,7 @@ class AppPages {
       page: () => const RecurringFormPage(),
       binding: RecurringFormBinding(),
     ),
-    GetPage(
-      name: AppRoutes.settings,
-      page: () => const SettingsPage(),
-    ),
+    GetPage(name: AppRoutes.settings, page: () => const SettingsPage()),
   ];
 
   /// Unknown deep links land back on the shell rather than a dead end.

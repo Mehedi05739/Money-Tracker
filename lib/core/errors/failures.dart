@@ -15,7 +15,7 @@ class ServerFailure extends Failure {
 
 class UnauthorizedFailure extends Failure {
   const UnauthorizedFailure([super.message = 'Session expired'])
-      : super(statusCode: 401);
+    : super(statusCode: 401);
 }
 
 class NetworkFailure extends Failure {

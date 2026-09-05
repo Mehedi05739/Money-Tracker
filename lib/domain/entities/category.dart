@@ -12,12 +12,8 @@ class Category {
     required this.createdAt,
   });
 
-  factory Category.draft(TransactionType type) => Category(
-        id: 0,
-        name: '',
-        type: type,
-        createdAt: DateTime.now(),
-      );
+  factory Category.draft(TransactionType type) =>
+      Category(id: 0, name: '', type: type, createdAt: DateTime.now());
 
   final int id;
   final String name;
@@ -38,17 +34,16 @@ class Category {
     int? color,
     bool? isDefault,
     bool? isArchived,
-  }) =>
-      Category(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        type: type ?? this.type,
-        icon: icon ?? this.icon,
-        color: color ?? this.color,
-        isDefault: isDefault ?? this.isDefault,
-        isArchived: isArchived ?? this.isArchived,
-        createdAt: createdAt,
-      );
+  }) => Category(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    type: type ?? this.type,
+    icon: icon ?? this.icon,
+    color: color ?? this.color,
+    isDefault: isDefault ?? this.isDefault,
+    isArchived: isArchived ?? this.isArchived,
+    createdAt: createdAt,
+  );
 
   @override
   bool operator ==(Object other) => other is Category && other.id == id;

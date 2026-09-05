@@ -5,6 +5,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/charts/donut_chart.dart';
 import '../../../../domain/entities/analytics.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 /// Spending-by-category donut with a ranked legend.
 class CategoryBreakdownCard extends StatelessWidget {
@@ -25,7 +26,7 @@ class CategoryBreakdownCard extends StatelessWidget {
               Icons.pie_chart_outline_rounded,
               color: theme.colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(width: 12),
+            AppSpacing.hGapMd,
             Expanded(
               child: Text(
                 'No spending recorded for this period',
@@ -44,7 +45,10 @@ class CategoryBreakdownCard extends StatelessWidget {
         DonutSlice(
           label: categories[i].categoryName,
           value: categories[i].amount,
-          color: CategoryIcons.resolveColor(categories[i].categoryColor, seed: i),
+          color: CategoryIcons.resolveColor(
+            categories[i].categoryColor,
+            seed: i,
+          ),
         ),
     ];
 
@@ -67,7 +71,7 @@ class CategoryBreakdownCard extends StatelessWidget {
                 seed: i,
               ),
             ),
-            if (i < categories.length - 1) const SizedBox(height: 12),
+            if (i < categories.length - 1) AppSpacing.gapMd,
           ],
         ],
       ),
@@ -86,7 +90,8 @@ class _LegendRow extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Semantics(
-      label: '${category.categoryName}, ${Money.format(category.amount)}, '
+      label:
+          '${category.categoryName}, ${Money.format(category.amount)}, '
           '${category.share.toStringAsFixed(0)} percent',
       child: Row(
         children: [
@@ -95,7 +100,7 @@ class _LegendRow extends StatelessWidget {
             height: 10,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 10),
+          AppSpacing.hGapSm,
           Expanded(
             child: Text(
               category.categoryName,
@@ -104,7 +109,7 @@ class _LegendRow extends StatelessWidget {
               style: theme.textTheme.bodyMedium,
             ),
           ),
-          const SizedBox(width: 8),
+          AppSpacing.hGapSm,
           SizedBox(
             width: 42,
             child: Text(
@@ -115,7 +120,7 @@ class _LegendRow extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          AppSpacing.hGapSm,
           Text(
             Money.format(category.amount),
             style: theme.textTheme.titleSmall,

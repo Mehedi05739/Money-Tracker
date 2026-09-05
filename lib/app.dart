@@ -28,10 +28,8 @@ class MoneyTrackerApp extends StatelessWidget {
       builder: (context, child) {
         // Clamp text scaling: financial figures must stay readable, but an
         // unbounded scale factor breaks amount columns and chart labels.
-        final scale = MediaQuery.textScalerOf(context).clamp(
-          minScaleFactor: 0.85,
-          maxScaleFactor: 1.4,
-        );
+        final scale = MediaQuery.textScalerOf(context)
+            .clamp(minScaleFactor: 0.85, maxScaleFactor: 1.4);
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: scale),
           child: child ?? const SizedBox.shrink(),

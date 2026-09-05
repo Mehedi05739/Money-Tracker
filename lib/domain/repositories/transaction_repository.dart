@@ -52,16 +52,15 @@ class TransactionFilter {
     double? minAmount,
     double? maxAmount,
     bool clearAmounts = false,
-  }) =>
-      TransactionFilter(
-        range: clearRange ? null : (range ?? this.range),
-        types: types ?? this.types,
-        categoryIds: categoryIds ?? this.categoryIds,
-        accountIds: accountIds ?? this.accountIds,
-        search: search ?? this.search,
-        minAmount: clearAmounts ? null : (minAmount ?? this.minAmount),
-        maxAmount: clearAmounts ? null : (maxAmount ?? this.maxAmount),
-      );
+  }) => TransactionFilter(
+    range: clearRange ? null : (range ?? this.range),
+    types: types ?? this.types,
+    categoryIds: categoryIds ?? this.categoryIds,
+    accountIds: accountIds ?? this.accountIds,
+    search: search ?? this.search,
+    minAmount: clearAmounts ? null : (minAmount ?? this.minAmount),
+    maxAmount: clearAmounts ? null : (maxAmount ?? this.maxAmount),
+  );
 }
 
 abstract class TransactionRepository {

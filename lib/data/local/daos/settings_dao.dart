@@ -27,19 +27,15 @@ class SettingsDao {
     return rows.isEmpty ? null : rows.first[SettingsColumns.value] as String?;
   }
 
-  Future<void> put(String key, String value) => _db.insert(
-        Tables.appSettings,
-        {
-          SettingsColumns.key: key,
-          SettingsColumns.value: value,
-          SettingsColumns.updatedAt: AppDate.toDb(DateTime.now()),
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+  Future<void> put(String key, String value) => _db.insert(Tables.appSettings, {
+    SettingsColumns.key: key,
+    SettingsColumns.value: value,
+    SettingsColumns.updatedAt: AppDate.toDb(DateTime.now()),
+  }, conflictAlgorithm: ConflictAlgorithm.replace);
 
   Future<int> remove(String key) => _db.delete(
-        Tables.appSettings,
-        where: '${SettingsColumns.key} = ?',
-        whereArgs: [key],
-      );
+    Tables.appSettings,
+    where: '${SettingsColumns.key} = ?',
+    whereArgs: [key],
+  );
 }

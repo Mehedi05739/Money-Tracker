@@ -15,9 +15,7 @@ class Migration {
 /// Bumped whenever a migration is appended.
 const int kDatabaseVersion = 1;
 
-const List<Migration> kMigrations = [
-  Migration(version: 1, statements: _v1),
-];
+const List<Migration> kMigrations = [Migration(version: 1, statements: _v1)];
 
 Future<void> applyMigrations(
   DatabaseExecutor db, {

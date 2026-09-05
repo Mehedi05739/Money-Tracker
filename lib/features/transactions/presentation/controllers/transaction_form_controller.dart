@@ -27,8 +27,10 @@ class TransactionFormArgs {
 
   factory TransactionFormArgs.fromRouteArguments(Object? arguments) =>
       switch (arguments) {
-        MoneyTransaction transaction =>
-          TransactionFormArgs(type: transaction.type, editing: transaction),
+        MoneyTransaction transaction => TransactionFormArgs(
+          type: transaction.type,
+          editing: transaction,
+        ),
         TransactionType type => TransactionFormArgs(type: type),
         _ => const TransactionFormArgs(),
       };
@@ -82,7 +84,8 @@ class TransactionFormController extends GetxController {
   MoneyTransaction? _editing;
 
   bool get isEditing => _editing != null;
-  String get submitLabel => isEditing ? 'Save changes' : 'Add ${type.value.label.toLowerCase()}';
+  String get submitLabel =>
+      isEditing ? 'Save changes' : 'Add ${type.value.label.toLowerCase()}';
 
   /// Categories matching the selected type. Transfers use none.
   List<Category> get availableCategories =>
@@ -111,8 +114,7 @@ class TransactionFormController extends GetxController {
     accounts.assignAll((await accountFuture).dataOrNull ?? const []);
     categories.assignAll((await categoryFuture).dataOrNull ?? const []);
 
-    final args =
-        seed ?? TransactionFormArgs.fromRouteArguments(Get.arguments);
+    final args = seed ?? TransactionFormArgs.fromRouteArguments(Get.arguments);
     final editing = args.editing;
 
     if (editing != null) {
@@ -127,7 +129,8 @@ class TransactionFormController extends GetxController {
 
   void _applyDefaults() {
     final preferredId = _settings.defaultAccountId.value;
-    account.value = accounts.firstWhereOrNull((a) => a.id == preferredId) ??
+    account.value =
+        accounts.firstWhereOrNull((a) => a.id == preferredId) ??
         accounts.firstOrNull;
   }
 
@@ -140,12 +143,15 @@ class TransactionFormController extends GetxController {
     date.value = transaction.transactionDate;
     paymentMethod.value = transaction.paymentMethod;
 
-    account.value =
-        accounts.firstWhereOrNull((a) => a.id == transaction.accountId);
-    toAccount.value =
-        accounts.firstWhereOrNull((a) => a.id == transaction.toAccountId);
-    category.value =
-        categories.firstWhereOrNull((c) => c.id == transaction.categoryId);
+    account.value = accounts.firstWhereOrNull(
+      (a) => a.id == transaction.accountId,
+    );
+    toAccount.value = accounts.firstWhereOrNull(
+      (a) => a.id == transaction.toAccountId,
+    );
+    category.value = categories.firstWhereOrNull(
+      (c) => c.id == transaction.categoryId,
+    );
   }
 
   void changeType(TransactionType value) {
@@ -298,8 +304,9 @@ class TransactionFormController extends GetxController {
 
   MoneyTransaction _buildTransaction() {
     final now = DateTime.now();
-    final amount =
-        Validators.normalizeAmount(Validators.parseAmount(amountField.text) ?? 0);
+    final amount = Validators.normalizeAmount(
+      Validators.parseAmount(amountField.text) ?? 0,
+    );
     final title = titleField.text.trim();
     final note = noteField.text.trim();
 
@@ -320,6 +327,7 @@ class TransactionFormController extends GetxController {
     );
   }
 
-  String get _fallbackTitle =>
-      type.value.isTransfer ? 'Transfer' : (category.value?.name ?? 'Transaction');
+  String get _fallbackTitle => type.value.isTransfer
+      ? 'Transfer'
+      : (category.value?.name ?? 'Transaction');
 }

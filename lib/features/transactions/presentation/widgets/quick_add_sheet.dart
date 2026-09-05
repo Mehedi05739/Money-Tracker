@@ -70,11 +70,11 @@ class QuickAddSheet extends StatelessWidget {
         maxHeight: MediaQuery.sizeOf(context).height * 0.9,
       ),
       child: Obx(
-          () => controller.isLoading.value
-              ? const SizedBox(
-                  height: 220,
-                  child: Center(child: CircularProgressIndicator.adaptive()),
-                )
+        () => controller.isLoading.value
+            ? const SizedBox(
+                height: 220,
+                child: Center(child: CircularProgressIndicator.adaptive()),
+              )
             : _Body(controller: controller),
       ),
     );
@@ -241,8 +241,9 @@ class _InlineChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color =
-        isError ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant;
+    final color = isError
+        ? theme.colorScheme.error
+        : theme.colorScheme.onSurfaceVariant;
 
     return ActionChip(
       onPressed: onTap,
@@ -288,8 +289,9 @@ class _CategorySection extends StatelessWidget {
                       error,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.colorScheme.error),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
                     ),
                   ),
                 ],

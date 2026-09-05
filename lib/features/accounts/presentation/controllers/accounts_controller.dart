@@ -24,8 +24,10 @@ class AccountsController extends BaseController {
     load();
 
     // The shell keeps this tab alive, so refresh when data changes elsewhere.
-    _changeWorker =
-        _events.listen(const [DataChange.accounts, DataChange.transactions], () => load(showLoader: false));
+    _changeWorker = _events.listen(const [
+      DataChange.accounts,
+      DataChange.transactions,
+    ], () => load(showLoader: false));
   }
 
   @override
@@ -37,8 +39,9 @@ class AccountsController extends BaseController {
   Future<void> load({bool showLoader = true}) async {
     if (showLoader) setLoading();
 
-    final accountFuture =
-        _repository.getAccounts(includeArchived: showArchived.value);
+    final accountFuture = _repository.getAccounts(
+      includeArchived: showArchived.value,
+    );
     final totalFuture = _repository.getTotalBalance();
 
     final accountResult = await accountFuture;

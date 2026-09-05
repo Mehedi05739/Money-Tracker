@@ -71,22 +71,21 @@ class Budget {
     int? alertPercentage,
     bool? isActive,
     DateTime? updatedAt,
-  }) =>
-      Budget(
-        id: id ?? this.id,
-        categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
-        amount: amount ?? this.amount,
-        period: period ?? this.period,
-        startDate: startDate ?? this.startDate,
-        endDate: endDate ?? this.endDate,
-        alertPercentage: alertPercentage ?? this.alertPercentage,
-        isActive: isActive ?? this.isActive,
-        createdAt: createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        categoryName: categoryName,
-        categoryIcon: categoryIcon,
-        categoryColor: categoryColor,
-      );
+  }) => Budget(
+    id: id ?? this.id,
+    categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
+    amount: amount ?? this.amount,
+    period: period ?? this.period,
+    startDate: startDate ?? this.startDate,
+    endDate: endDate ?? this.endDate,
+    alertPercentage: alertPercentage ?? this.alertPercentage,
+    isActive: isActive ?? this.isActive,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    categoryName: categoryName,
+    categoryIcon: categoryIcon,
+    categoryColor: categoryColor,
+  );
 
   @override
   bool operator ==(Object other) => other is Budget && other.id == id;

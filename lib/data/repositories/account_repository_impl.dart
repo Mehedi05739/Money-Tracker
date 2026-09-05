@@ -19,10 +19,8 @@ class AccountRepositoryImpl implements AccountRepository {
       );
 
   @override
-  Future<Result<Account>> getById(int id) => guardFound(
-        () => _dao.findById(id),
-        notFoundMessage: 'Account not found',
-      );
+  Future<Result<Account>> getById(int id) =>
+      guardFound(() => _dao.findById(id), notFoundMessage: 'Account not found');
 
   @override
   Future<Result<Account>> create(Account account) async {
@@ -32,7 +30,9 @@ class AccountRepositoryImpl implements AccountRepository {
     return guard(() async {
       final id = await _dao.insert(account);
       final created = await _dao.findById(id);
-      if (created == null) throw StateError('Account $id vanished after insert');
+      if (created == null) {
+        throw StateError('Account $id vanished after insert');
+      }
       return created;
     }, context: 'createAccount');
   }

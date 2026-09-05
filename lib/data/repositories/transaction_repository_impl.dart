@@ -16,11 +16,10 @@ class TransactionRepositoryImpl implements TransactionRepository {
     TransactionFilter filter = const TransactionFilter(),
     int limit = 30,
     int offset = 0,
-  }) =>
-      guard(
-        () => _dao.find(filter: filter, limit: limit, offset: offset),
-        context: 'getTransactions',
-      );
+  }) => guard(
+    () => _dao.find(filter: filter, limit: limit, offset: offset),
+    context: 'getTransactions',
+  );
 
   @override
   Future<Result<int>> count(TransactionFilter filter) =>
@@ -28,9 +27,9 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<Result<MoneyTransaction>> getById(int id) => guardFound(
-        () => _dao.findById(id),
-        notFoundMessage: 'Transaction not found',
-      );
+    () => _dao.findById(id),
+    notFoundMessage: 'Transaction not found',
+  );
 
   @override
   Future<Result<List<MoneyTransaction>>> getRecent({int limit = 5}) =>
@@ -111,8 +110,9 @@ class TransactionRepositoryImpl implements TransactionRepository {
     }
 
     // A far-future date is almost always a typo in the year field.
-    if (transaction.transactionDate
-        .isAfter(DateTime.now().add(const Duration(days: 365 * 5)))) {
+    if (transaction.transactionDate.isAfter(
+      DateTime.now().add(const Duration(days: 365 * 5)),
+    )) {
       errors['date'] = 'That date is too far in the future';
     }
 

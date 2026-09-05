@@ -86,19 +86,15 @@ class RecurringTransaction {
 
   /// Advances a due date by one interval, clamping month-end overflow.
   DateTime occurrenceAfter(DateTime from) => switch (frequency) {
-        RecurrenceFrequency.daily =>
-          from.add(Duration(days: intervalCount)),
-        RecurrenceFrequency.weekly =>
-          from.add(Duration(days: 7 * intervalCount)),
-        RecurrenceFrequency.biweekly =>
-          from.add(Duration(days: 14 * intervalCount)),
-        RecurrenceFrequency.monthly =>
-          AppDate.addMonths(from, intervalCount),
-        RecurrenceFrequency.quarterly =>
-          AppDate.addMonths(from, 3 * intervalCount),
-        RecurrenceFrequency.yearly =>
-          AppDate.addMonths(from, 12 * intervalCount),
-      };
+    RecurrenceFrequency.daily => from.add(Duration(days: intervalCount)),
+    RecurrenceFrequency.weekly => from.add(Duration(days: 7 * intervalCount)),
+    RecurrenceFrequency.biweekly => from.add(
+      Duration(days: 14 * intervalCount),
+    ),
+    RecurrenceFrequency.monthly => AppDate.addMonths(from, intervalCount),
+    RecurrenceFrequency.quarterly => AppDate.addMonths(from, 3 * intervalCount),
+    RecurrenceFrequency.yearly => AppDate.addMonths(from, 12 * intervalCount),
+  };
 
   RecurringTransaction copyWith({
     int? id,
@@ -120,31 +116,30 @@ class RecurringTransaction {
     bool? isActive,
     bool? autoPost,
     DateTime? updatedAt,
-  }) =>
-      RecurringTransaction(
-        id: id ?? this.id,
-        accountId: accountId ?? this.accountId,
-        categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
-        type: type ?? this.type,
-        amount: amount ?? this.amount,
-        title: title ?? this.title,
-        note: note ?? this.note,
-        paymentMethod: paymentMethod ?? this.paymentMethod,
-        frequency: frequency ?? this.frequency,
-        intervalCount: intervalCount ?? this.intervalCount,
-        startDate: startDate ?? this.startDate,
-        endDate: clearEndDate ? null : (endDate ?? this.endDate),
-        nextRunDate: nextRunDate ?? this.nextRunDate,
-        lastRunDate: lastRunDate ?? this.lastRunDate,
-        isActive: isActive ?? this.isActive,
-        autoPost: autoPost ?? this.autoPost,
-        createdAt: createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        categoryName: categoryName,
-        categoryIcon: categoryIcon,
-        categoryColor: categoryColor,
-        accountName: accountName,
-      );
+  }) => RecurringTransaction(
+    id: id ?? this.id,
+    accountId: accountId ?? this.accountId,
+    categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
+    type: type ?? this.type,
+    amount: amount ?? this.amount,
+    title: title ?? this.title,
+    note: note ?? this.note,
+    paymentMethod: paymentMethod ?? this.paymentMethod,
+    frequency: frequency ?? this.frequency,
+    intervalCount: intervalCount ?? this.intervalCount,
+    startDate: startDate ?? this.startDate,
+    endDate: clearEndDate ? null : (endDate ?? this.endDate),
+    nextRunDate: nextRunDate ?? this.nextRunDate,
+    lastRunDate: lastRunDate ?? this.lastRunDate,
+    isActive: isActive ?? this.isActive,
+    autoPost: autoPost ?? this.autoPost,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    categoryName: categoryName,
+    categoryIcon: categoryIcon,
+    categoryColor: categoryColor,
+    accountName: accountName,
+  );
 
   @override
   bool operator ==(Object other) =>

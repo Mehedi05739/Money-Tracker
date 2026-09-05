@@ -6,6 +6,7 @@ import '../../../../core/widgets/category_avatar.dart';
 import '../../../../domain/entities/account.dart';
 import '../../../../domain/entities/category.dart';
 import '../../../../domain/repositories/transaction_repository.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 /// Multi-select filter sheet. Edits a local copy and only applies on confirm,
 /// so cancelling leaves the list untouched.
@@ -97,7 +98,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  AppSpacing.gapLg,
                   _Label('Accounts'),
                   Wrap(
                     spacing: 8,
@@ -115,7 +116,7 @@ class _TransactionFilterSheetState extends State<TransactionFilterSheet> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  AppSpacing.gapLg,
                   _Label('Categories'),
                   Wrap(
                     spacing: 8,
@@ -169,7 +170,7 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Text(text, style: Theme.of(context).textTheme.titleMedium),
-      );
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Text(text, style: Theme.of(context).textTheme.titleMedium),
+  );
 }

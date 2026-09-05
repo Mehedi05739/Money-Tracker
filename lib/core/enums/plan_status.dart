@@ -4,13 +4,13 @@ enum PlanStatus {
   archived;
 
   static PlanStatus fromName(String? value) => values.firstWhere(
-        (e) => e.name == value,
-        orElse: () => PlanStatus.active,
-      );
+    (e) => e.name == value,
+    orElse: () => PlanStatus.active,
+  );
 
   String get label => switch (this) {
-        PlanStatus.active => 'Active',
-        PlanStatus.completed => 'Completed',
-        PlanStatus.archived => 'Archived',
-      };
+    PlanStatus.active => 'Active',
+    PlanStatus.completed => 'Completed',
+    PlanStatus.archived => 'Archived',
+  };
 }

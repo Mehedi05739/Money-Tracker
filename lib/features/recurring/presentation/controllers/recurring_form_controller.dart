@@ -111,8 +111,9 @@ class RecurringFormController extends GetxController {
     autoPost.value = rule.autoPost;
     paymentMethod.value = rule.paymentMethod;
     account.value = accounts.firstWhereOrNull((a) => a.id == rule.accountId);
-    category.value =
-        categories.firstWhereOrNull((c) => c.id == rule.categoryId);
+    category.value = categories.firstWhereOrNull(
+      (c) => c.id == rule.categoryId,
+    );
   }
 
   void changeType(TransactionType value) {
@@ -183,14 +184,17 @@ class RecurringFormController extends GetxController {
       updatedAt: now,
     );
 
-    final result =
-        isEditing ? await _repository.update(draft) : await _repository.create(draft);
+    final result = isEditing
+        ? await _repository.update(draft)
+        : await _repository.create(draft);
     isSubmitting.value = false;
 
     return result.fold(
       onSuccess: (_) {
         _events.emit(DataChange.recurring);
-        AppSnackbar.success(isEditing ? 'Schedule updated' : 'Schedule created');
+        AppSnackbar.success(
+          isEditing ? 'Schedule updated' : 'Schedule created',
+        );
         return true;
       },
       onError: (failure) {

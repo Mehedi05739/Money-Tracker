@@ -6,22 +6,22 @@ enum TransactionType {
   transfer;
 
   static TransactionType fromName(String? value) => values.firstWhere(
-        (e) => e.name == value,
-        orElse: () => TransactionType.expense,
-      );
+    (e) => e.name == value,
+    orElse: () => TransactionType.expense,
+  );
 
   String get label => switch (this) {
-        TransactionType.income => 'Income',
-        TransactionType.expense => 'Expense',
-        TransactionType.transfer => 'Transfer',
-      };
+    TransactionType.income => 'Income',
+    TransactionType.expense => 'Expense',
+    TransactionType.transfer => 'Transfer',
+  };
 
   /// How this type moves the source account's balance.
   int get balanceSign => switch (this) {
-        TransactionType.income => 1,
-        TransactionType.expense => -1,
-        TransactionType.transfer => -1,
-      };
+    TransactionType.income => 1,
+    TransactionType.expense => -1,
+    TransactionType.transfer => -1,
+  };
 
   bool get isIncome => this == TransactionType.income;
   bool get isExpense => this == TransactionType.expense;

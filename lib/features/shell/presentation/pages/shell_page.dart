@@ -36,7 +36,9 @@ class ShellPage extends GetView<ShellController> {
     final useRail = context.usesNavigationRail;
 
     return Scaffold(
-      body: useRail ? _RailLayout(controller: controller) : _TabBody(controller: controller),
+      body: useRail
+          ? _RailLayout(controller: controller)
+          : _TabBody(controller: controller),
       floatingActionButton: useRail
           ? null
           : FloatingActionButton(
@@ -128,12 +130,12 @@ class _TabBody extends StatelessWidget {
   }
 
   Widget _bodyFor(int index) => switch (index) {
-        0 => const DashboardPage(),
-        1 => const TransactionsPage(),
-        2 => const PlansPage(),
-        3 => const ReportsPage(),
-        _ => const MorePage(),
-      };
+    0 => const DashboardPage(),
+    1 => const TransactionsPage(),
+    2 => const PlansPage(),
+    3 => const ReportsPage(),
+    _ => const MorePage(),
+  };
 }
 
 class ShellTab {

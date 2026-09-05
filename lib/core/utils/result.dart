@@ -23,31 +23,30 @@ sealed class Result<T> {
 
   /// The value on success, `null` otherwise.
   T? get dataOrNull => switch (this) {
-        Success<T>(:final data) => data,
-        Failed<T>() => null,
-      };
+    Success<T>(:final data) => data,
+    Failed<T>() => null,
+  };
 
   /// The failure on error, `null` otherwise.
   Failure? get failureOrNull => switch (this) {
-        Success<T>() => null,
-        Failed<T>(:final failure) => failure,
-      };
+    Success<T>() => null,
+    Failed<T>(:final failure) => failure,
+  };
 
   /// Collapses both branches into a single value.
   R fold<R>({
     required R Function(T data) onSuccess,
     required R Function(Failure failure) onError,
-  }) =>
-      switch (this) {
-        Success<T>(:final data) => onSuccess(data),
-        Failed<T>(:final failure) => onError(failure),
-      };
+  }) => switch (this) {
+    Success<T>(:final data) => onSuccess(data),
+    Failed<T>(:final failure) => onError(failure),
+  };
 
   /// Transforms the success value, leaving a failure untouched.
   Result<R> map<R>(R Function(T data) transform) => switch (this) {
-        Success<T>(:final data) => Success<R>(transform(data)),
-        Failed<T>(:final failure) => Failed<R>(failure),
-      };
+    Success<T>(:final data) => Success<R>(transform(data)),
+    Failed<T>(:final failure) => Failed<R>(failure),
+  };
 }
 
 final class Success<T> extends Result<T> {

@@ -64,20 +64,20 @@ class AccountDao {
   }
 
   Future<int> delete(int id) => _db.delete(
-        Tables.accounts,
-        where: '${AccountColumns.id} = ?',
-        whereArgs: [id],
-      );
+    Tables.accounts,
+    where: '${AccountColumns.id} = ?',
+    whereArgs: [id],
+  );
 
   Future<int> setArchived(int id, bool archived) => _db.update(
-        Tables.accounts,
-        {
-          AccountColumns.isArchived: asDbBool(archived),
-          AccountColumns.updatedAt: AppDate.toDb(DateTime.now()),
-        },
-        where: '${AccountColumns.id} = ?',
-        whereArgs: [id],
-      );
+    Tables.accounts,
+    {
+      AccountColumns.isArchived: asDbBool(archived),
+      AccountColumns.updatedAt: AppDate.toDb(DateTime.now()),
+    },
+    where: '${AccountColumns.id} = ?',
+    whereArgs: [id],
+  );
 
   Future<double> totalBalance() async {
     final rows = await _db.rawQuery(
@@ -88,7 +88,9 @@ class AccountDao {
   }
 
   Future<int> count() async {
-    final rows = await _db.rawQuery('SELECT COUNT(*) AS c FROM ${Tables.accounts}');
+    final rows = await _db.rawQuery(
+      'SELECT COUNT(*) AS c FROM ${Tables.accounts}',
+    );
     return rows.first.readIntOrNull('c') ?? 0;
   }
 
@@ -96,7 +98,8 @@ class AccountDao {
   /// bulk imports, where per-row maintenance would be wasteful.
   Future<void> recalculateAll() async {
     await _db.transaction((txn) async {
-      await txn.rawUpdate('''
+      await txn.rawUpdate(
+        '''
         UPDATE ${Tables.accounts}
         SET ${AccountColumns.currentBalance} = ${AccountColumns.openingBalance}
           + COALESCE((
@@ -115,7 +118,9 @@ class AccountDao {
               WHERE t.${TransactionColumns.toAccountId} = ${Tables.accounts}.${AccountColumns.id}
             ), 0),
             ${AccountColumns.updatedAt} = ?
-      ''', [AppDate.toDb(DateTime.now())]);
+      ''',
+        [AppDate.toDb(DateTime.now())],
+      );
     });
   }
 }

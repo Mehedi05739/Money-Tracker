@@ -12,10 +12,14 @@ Failure mapExceptionToFailure(Object error, [StackTrace? stackTrace]) {
     NetworkException(:final message) => NetworkFailure(message),
     CacheException(:final message) => CacheFailure(message),
     ParseException(:final message) => ServerFailure(message),
-    ServerException(:final message, :final statusCode) =>
-      ServerFailure(message, statusCode: statusCode),
-    AppException(:final message, :final statusCode) =>
-      ServerFailure(message, statusCode: statusCode),
+    ServerException(:final message, :final statusCode) => ServerFailure(
+      message,
+      statusCode: statusCode,
+    ),
+    AppException(:final message, :final statusCode) => ServerFailure(
+      message,
+      statusCode: statusCode,
+    ),
     _ => const UnknownFailure(),
   };
 }

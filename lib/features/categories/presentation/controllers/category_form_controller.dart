@@ -77,8 +77,9 @@ class CategoryFormController extends GetxController {
       createdAt: _editing?.createdAt ?? DateTime.now(),
     );
 
-    final result =
-        isEditing ? await _repository.update(draft) : await _repository.create(draft);
+    final result = isEditing
+        ? await _repository.update(draft)
+        : await _repository.create(draft);
     isSubmitting.value = false;
 
     return result.fold(

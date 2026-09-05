@@ -72,8 +72,10 @@ class PlanFormController extends GetxController {
 
     fieldErrors.clear();
     final nameError = Validators.name(nameField.text, field: 'Plan name');
-    final limitError =
-        Validators.amount(limitField.text, field: 'Spending limit');
+    final limitError = Validators.amount(
+      limitField.text,
+      field: 'Spending limit',
+    );
 
     if (nameError != null) fieldErrors['name'] = nameError;
     if (limitError != null) fieldErrors['totalLimit'] = limitError;
@@ -97,8 +99,9 @@ class PlanFormController extends GetxController {
       updatedAt: now,
     );
 
-    final result =
-        isEditing ? await _repository.update(draft) : await _repository.create(draft);
+    final result = isEditing
+        ? await _repository.update(draft)
+        : await _repository.create(draft);
     isSubmitting.value = false;
 
     return result.fold(

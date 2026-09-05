@@ -8,6 +8,7 @@ import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/form_fields.dart';
 import '../../../transactions/presentation/widgets/picker_sheets.dart';
 import '../controllers/goal_form_controller.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class GoalFormPage extends GetView<GoalFormController> {
   const GoalFormPage({super.key});
@@ -33,7 +34,7 @@ class GoalFormPage extends GetView<GoalFormController> {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  AppSpacing.gapSm,
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -50,7 +51,7 @@ class GoalFormPage extends GetView<GoalFormController> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  AppSpacing.gapLg,
                 ],
                 Obx(
                   () => AppTextField(
@@ -60,7 +61,7 @@ class GoalFormPage extends GetView<GoalFormController> {
                     errorText: controller.fieldErrors['name'],
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapBase,
                 Obx(
                   () => AmountField(
                     controller: controller.targetField,
@@ -68,7 +69,7 @@ class GoalFormPage extends GetView<GoalFormController> {
                     errorText: controller.fieldErrors['targetAmount'],
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapBase,
                 Obx(
                   () => AppPickerField(
                     label: 'Target date',
@@ -81,7 +82,7 @@ class GoalFormPage extends GetView<GoalFormController> {
                     onTap: () => _pickDate(context),
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapBase,
                 if (controller.isEditing)
                   Obx(
                     () => AppPickerField(
@@ -98,7 +99,7 @@ class GoalFormPage extends GetView<GoalFormController> {
                       },
                     ),
                   ),
-                if (controller.isEditing) const SizedBox(height: 16),
+                if (controller.isEditing) AppSpacing.gapBase,
                 Obx(
                   () => AppPickerField(
                     label: 'Icon',
@@ -115,14 +116,14 @@ class GoalFormPage extends GetView<GoalFormController> {
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapBase,
                 Text(
                   'Colour',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 10),
+                AppSpacing.gapSm,
                 Obx(
                   () => Wrap(
                     spacing: 10,
@@ -138,7 +139,8 @@ class GoalFormPage extends GetView<GoalFormController> {
                               color: color,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: controller.color.value == color.toARGB32()
+                                color:
+                                    controller.color.value == color.toARGB32()
                                     ? theme.colorScheme.onSurface
                                     : Colors.transparent,
                                 width: 2.5,
@@ -156,7 +158,7 @@ class GoalFormPage extends GetView<GoalFormController> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapBase,
                 AppTextField(
                   controller: controller.noteField,
                   label: 'Note',
@@ -189,8 +191,9 @@ class GoalFormPage extends GetView<GoalFormController> {
                 child: controller.isSubmitting.value
                     ? const SizedBox.square(
                         dimension: 20,
-                        child:
-                            CircularProgressIndicator.adaptive(strokeWidth: 2),
+                        child: CircularProgressIndicator.adaptive(
+                          strokeWidth: 2,
+                        ),
                       )
                     : Text(
                         controller.isEditing ? 'Save changes' : 'Create goal',
@@ -207,8 +210,8 @@ class GoalFormPage extends GetView<GoalFormController> {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: controller.targetDate.value ??
-          now.add(const Duration(days: 180)),
+      initialDate:
+          controller.targetDate.value ?? now.add(const Duration(days: 180)),
       firstDate: now,
       lastDate: DateTime(now.year + 20),
     );

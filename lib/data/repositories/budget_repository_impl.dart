@@ -65,9 +65,9 @@ class BudgetRepositoryImpl implements BudgetRepository {
 
   @override
   Future<Result<BudgetStatus>> getStatus(int budgetId) => guardFound(
-        () => _dao.findStatusById(budgetId),
-        notFoundMessage: 'Budget not found',
-      );
+    () => _dao.findStatusById(budgetId),
+    notFoundMessage: 'Budget not found',
+  );
 
   Failure? _validate(Budget budget) {
     final errors = <String, String>{};

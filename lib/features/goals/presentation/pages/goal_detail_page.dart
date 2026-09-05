@@ -19,6 +19,8 @@ import '../../../../domain/entities/financial_goal.dart';
 import '../../../../routes/app_routes.dart';
 import '../../../transactions/presentation/widgets/picker_sheets.dart';
 import '../controllers/goal_detail_controller.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class GoalDetailPage extends GetView<GoalDetailController> {
   const GoalDetailPage({super.key});
@@ -35,8 +37,10 @@ class GoalDetailPage extends GetView<GoalDetailController> {
             return IconButton(
               tooltip: 'Edit goal',
               onPressed: () async {
-                final saved =
-                    await Get.toNamed(AppRoutes.goalForm, arguments: goal);
+                final saved = await Get.toNamed(
+                  AppRoutes.goalForm,
+                  arguments: goal,
+                );
                 if (saved == true) await controller.load(showLoader: false);
               },
               icon: const Icon(Icons.edit_outlined),
@@ -56,8 +60,10 @@ class GoalDetailPage extends GetView<GoalDetailController> {
 
           return switch (state) {
             IdleState() || LoadingState() => const AppLoader(),
-            ErrorState(:final message) =>
-              AppErrorView(message: message, onRetry: controller.load),
+            ErrorState(:final message) => AppErrorView(
+              message: message,
+              onRetry: controller.load,
+            ),
             _ => _DetailBody(controller: controller),
           };
         }),
@@ -115,7 +121,7 @@ class _DetailBody extends StatelessWidget {
                       size: 28,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  AppSpacing.gapMd,
                   Text(
                     Money.format(goal.currentAmount),
                     style: theme.textTheme.displaySmall?.copyWith(color: color),
@@ -126,14 +132,14 @@ class _DetailBody extends StatelessWidget {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.gapBase,
                   AppProgressBar(
                     value: goal.progressPercent / 100,
                     color: color,
                     warningThreshold: 2,
                     height: 10,
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.gapBase,
                   Row(
                     children: [
                       Expanded(
@@ -159,13 +165,13 @@ class _DetailBody extends StatelessWidget {
                     ],
                   ),
                   if (goal.requiredMonthlyContribution != null) ...[
-                    const SizedBox(height: 16),
+                    AppSpacing.gapBase,
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.09),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: AppRadius.mdAll,
                       ),
                       child: Text(
                         'Set aside '
@@ -177,7 +183,7 @@ class _DetailBody extends StatelessWidget {
                     ),
                   ],
                   if (goal.isOverdue) ...[
-                    const SizedBox(height: 16),
+                    AppSpacing.gapBase,
                     Text(
                       'This goal is past its target date.',
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -343,7 +349,9 @@ class _ContributionSheet extends StatefulWidget {
     final context = Get.context;
     if (context == null) return Future.value();
 
-    return showModalBottomSheet<({double amount, Account? account, String? note})>(
+    return showModalBottomSheet<
+      ({double amount, Account? account, String? note})
+    >(
       context: context,
       isScrollControlled: true,
       builder: (_) => _ContributionSheet(accounts: accounts),
@@ -388,9 +396,7 @@ class _ContributionSheetState extends State<_ContributionSheet> {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
@@ -402,14 +408,14 @@ class _ContributionSheetState extends State<_ContributionSheet> {
                 _isWithdrawal ? 'Withdraw from goal' : 'Add contribution',
                 style: theme.textTheme.titleLarge,
               ),
-              const SizedBox(height: 16),
+              AppSpacing.gapBase,
               AmountField(
                 controller: _amount,
                 label: 'Amount',
                 autofocus: true,
                 errorText: _error,
               ),
-              const SizedBox(height: 12),
+              AppSpacing.gapMd,
               AppPickerField(
                 label: 'From account',
                 value: _account?.name,
@@ -422,21 +428,21 @@ class _ContributionSheetState extends State<_ContributionSheet> {
                   if (picked != null) setState(() => _account = picked);
                 },
               ),
-              const SizedBox(height: 12),
+              AppSpacing.gapMd,
               AppTextField(
                 controller: _note,
                 label: 'Note',
                 hint: 'Optional',
                 maxLength: 120,
               ),
-              const SizedBox(height: 8),
+              AppSpacing.gapSm,
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _isWithdrawal,
                 onChanged: (value) => setState(() => _isWithdrawal = value),
                 title: const Text('This is a withdrawal'),
               ),
-              const SizedBox(height: 8),
+              AppSpacing.gapSm,
               FilledButton(
                 onPressed: _submit,
                 child: Text(_isWithdrawal ? 'Withdraw' : 'Add contribution'),

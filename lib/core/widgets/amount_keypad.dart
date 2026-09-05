@@ -52,8 +52,9 @@ class AmountDisplay extends StatelessWidget {
                       maxLines: 1,
                       style: theme.textTheme.displaySmall?.copyWith(
                         color: isEmpty
-                            ? theme.colorScheme.onSurfaceVariant
-                                .withValues(alpha: 0.5)
+                            ? theme.colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.5,
+                              )
                             : theme.colorScheme.onSurface,
                       ),
                     ),
@@ -68,8 +69,9 @@ class AmountDisplay extends StatelessWidget {
           Text(
             errorText!,
             textAlign: textAlign,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.error),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
           ),
         ],
       ],
@@ -113,11 +115,7 @@ class AmountKeypad extends StatelessWidget {
             height: keyHeight,
             children: [
               for (final key in row)
-                _Key(
-                  label: key,
-                  height: keyHeight,
-                  onTap: () => onDigit(key),
-                ),
+                _Key(label: key, height: keyHeight, onTap: () => onDigit(key)),
             ],
           ),
         _KeyRow(
@@ -147,16 +145,16 @@ class _KeyRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: Row(
-          children: [
-            for (var i = 0; i < children.length; i++) ...[
-              if (i > 0) AppSpacing.hGapSm,
-              Expanded(child: children[i]),
-            ],
-          ],
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+    child: Row(
+      children: [
+        for (var i = 0; i < children.length; i++) ...[
+          if (i > 0) AppSpacing.hGapSm,
+          Expanded(child: children[i]),
+        ],
+      ],
+    ),
+  );
 }
 
 class _Key extends StatelessWidget {
@@ -184,8 +182,9 @@ class _Key extends StatelessWidget {
       button: true,
       label: semanticLabel ?? label,
       child: Material(
-        color: theme.colorScheme.surfaceContainerHighest
-            .withValues(alpha: 0.45),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.45,
+        ),
         borderRadius: AppRadius.mdAll,
         child: InkWell(
           borderRadius: AppRadius.mdAll,

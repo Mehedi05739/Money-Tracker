@@ -60,7 +60,11 @@ class AmountInputFormatter extends TextInputFormatter {
     final text = newValue.text;
     if (text.isEmpty) return newValue;
 
-    final pattern = RegExp(r'^\d*\.?\d{0,' '$decimals' r'}$');
+    final pattern = RegExp(
+      r'^\d*\.?\d{0,'
+      '$decimals'
+      r'}$',
+    );
     if (!pattern.hasMatch(text)) return oldValue;
     return newValue;
   }

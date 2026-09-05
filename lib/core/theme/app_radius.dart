@@ -37,6 +37,7 @@ class AppRadius {
   static const BorderRadius pillAll = BorderRadius.all(Radius.circular(pill));
 
   /// Bottom sheets: rounded top only.
-  static const BorderRadius sheetTop =
-      BorderRadius.vertical(top: Radius.circular(xxl));
+  static const BorderRadius sheetTop = BorderRadius.vertical(
+    top: Radius.circular(xxl),
+  );
 }

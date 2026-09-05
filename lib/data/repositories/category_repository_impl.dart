@@ -21,17 +21,16 @@ class CategoryRepositoryImpl implements CategoryRepository {
   Future<Result<List<Category>>> getCategories({
     TransactionType? type,
     bool includeArchived = false,
-  }) =>
-      guard(
-        () => _dao.find(type: type, includeArchived: includeArchived),
-        context: 'getCategories',
-      );
+  }) => guard(
+    () => _dao.find(type: type, includeArchived: includeArchived),
+    context: 'getCategories',
+  );
 
   @override
   Future<Result<Category>> getById(int id) => guardFound(
-        () => _dao.findById(id),
-        notFoundMessage: 'Category not found',
-      );
+    () => _dao.findById(id),
+    notFoundMessage: 'Category not found',
+  );
 
   @override
   Future<Result<Category>> create(Category category) async {
@@ -44,7 +43,9 @@ class CategoryRepositoryImpl implements CategoryRepository {
     return guard(() async {
       final id = await _dao.insert(category);
       final created = await _dao.findById(id);
-      if (created == null) throw StateError('Category $id missing after insert');
+      if (created == null) {
+        throw StateError('Category $id missing after insert');
+      }
       return created;
     }, context: 'createCategory');
   }

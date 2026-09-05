@@ -5,6 +5,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_progress_bar.dart';
 import '../../../../domain/entities/budget_status.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 /// Surfaces budgets that are over or near their limit, worst first.
 class BudgetAlertCard extends StatelessWidget {
@@ -37,7 +38,7 @@ class BudgetAlertCard extends StatelessWidget {
                 size: 18,
                 color: context.warningColor,
               ),
-              const SizedBox(width: 8),
+              AppSpacing.hGapSm,
               Text('Budget alerts', style: theme.textTheme.titleMedium),
               const Spacer(),
               if (overflow > 0)
@@ -49,10 +50,10 @@ class BudgetAlertCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 14),
+          AppSpacing.gapMd,
           for (var i = 0; i < visible.length; i++) ...[
             _AlertRow(status: visible[i]),
-            if (i < visible.length - 1) const SizedBox(height: 14),
+            if (i < visible.length - 1) AppSpacing.gapMd,
           ],
         ],
       ),
@@ -68,8 +69,9 @@ class _AlertRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color =
-        status.isExceeded ? context.expenseColor : context.warningColor;
+    final color = status.isExceeded
+        ? context.expenseColor
+        : context.warningColor;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +92,7 @@ class _AlertRow extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        AppSpacing.gapSm,
         AppProgressBar(
           value: status.usageFraction,
           exceeded: status.isExceeded,
@@ -101,7 +103,7 @@ class _AlertRow extends StatelessWidget {
           status.isExceeded
               ? '${Money.format(status.spent - status.limit)} over budget'
               : '${Money.format(status.remaining)} left · '
-                  '${Money.format(status.safeDailyAllowance)}/day',
+                    '${Money.format(status.safeDailyAllowance)}/day',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),

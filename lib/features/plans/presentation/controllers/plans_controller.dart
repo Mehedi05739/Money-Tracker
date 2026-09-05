@@ -18,9 +18,8 @@ class PlansController extends BaseController {
   final Rxn<SpendingPlanProgress> current = Rxn<SpendingPlanProgress>();
 
   /// Plans other than the one already shown as the current plan.
-  List<SpendingPlan> get otherPlans => plans
-      .where((plan) => plan.id != current.value?.plan.id)
-      .toList();
+  List<SpendingPlan> get otherPlans =>
+      plans.where((plan) => plan.id != current.value?.plan.id).toList();
 
   Worker? _changeWorker;
 
@@ -30,8 +29,10 @@ class PlansController extends BaseController {
     load();
 
     // The shell keeps this tab alive, so refresh when data changes elsewhere.
-    _changeWorker =
-        _events.listen(const [DataChange.plans, DataChange.transactions], () => load(showLoader: false));
+    _changeWorker = _events.listen(const [
+      DataChange.plans,
+      DataChange.transactions,
+    ], () => load(showLoader: false));
   }
 
   @override

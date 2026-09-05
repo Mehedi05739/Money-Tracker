@@ -12,20 +12,20 @@ class BudgetMapper {
   static const String aliasCategoryColor = 'category_color';
 
   static Budget fromRow(Map<String, Object?> row) => Budget(
-        id: row.readInt(BudgetColumns.id),
-        categoryId: row.readIntOrNull(BudgetColumns.categoryId),
-        amount: row.readDouble(BudgetColumns.amount),
-        period: BudgetPeriod.fromName(row[BudgetColumns.period] as String?),
-        startDate: row.readDate(BudgetColumns.startDate),
-        endDate: row.readDate(BudgetColumns.endDate),
-        alertPercentage: row.readIntOrNull(BudgetColumns.alertPercentage) ?? 80,
-        isActive: row.readBool(BudgetColumns.isActive),
-        createdAt: row.readDate(BudgetColumns.createdAt),
-        updatedAt: row.readDate(BudgetColumns.updatedAt),
-        categoryName: row.readStringOrNull(aliasCategoryName),
-        categoryIcon: row.readStringOrNull(aliasCategoryIcon),
-        categoryColor: row.readIntOrNull(aliasCategoryColor),
-      );
+    id: row.readInt(BudgetColumns.id),
+    categoryId: row.readIntOrNull(BudgetColumns.categoryId),
+    amount: row.readDouble(BudgetColumns.amount),
+    period: BudgetPeriod.fromName(row[BudgetColumns.period] as String?),
+    startDate: row.readDate(BudgetColumns.startDate),
+    endDate: row.readDate(BudgetColumns.endDate),
+    alertPercentage: row.readIntOrNull(BudgetColumns.alertPercentage) ?? 80,
+    isActive: row.readBool(BudgetColumns.isActive),
+    createdAt: row.readDate(BudgetColumns.createdAt),
+    updatedAt: row.readDate(BudgetColumns.updatedAt),
+    categoryName: row.readStringOrNull(aliasCategoryName),
+    categoryIcon: row.readStringOrNull(aliasCategoryIcon),
+    categoryColor: row.readIntOrNull(aliasCategoryColor),
+  );
 
   static Map<String, Object?> toRow(Budget budget, {bool includeId = false}) {
     return {

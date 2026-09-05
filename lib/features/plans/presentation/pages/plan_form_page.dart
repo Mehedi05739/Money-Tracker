@@ -6,6 +6,7 @@ import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/form_fields.dart';
 import '../../../transactions/presentation/widgets/picker_sheets.dart';
 import '../controllers/plan_form_controller.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class PlanFormPage extends GetView<PlanFormController> {
   const PlanFormPage({super.key});
@@ -34,7 +35,7 @@ class PlanFormPage extends GetView<PlanFormController> {
                     errorText: controller.fieldErrors['name'],
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapBase,
                 Obx(
                   () => AmountField(
                     controller: controller.limitField,
@@ -42,17 +43,18 @@ class PlanFormPage extends GetView<PlanFormController> {
                     errorText: controller.fieldErrors['totalLimit'],
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapBase,
                 Obx(
                   () => AppPickerField(
                     label: 'Plan period',
-                    value: '${AppDate.formatDate(controller.startDate.value)}'
+                    value:
+                        '${AppDate.formatDate(controller.startDate.value)}'
                         ' – ${AppDate.formatDate(controller.endDate.value)}',
                     trailingIcon: Icons.date_range_rounded,
                     onTap: () => _pickRange(context),
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapBase,
                 if (controller.isEditing)
                   Obx(
                     () => AppPickerField(
@@ -69,7 +71,7 @@ class PlanFormPage extends GetView<PlanFormController> {
                       },
                     ),
                   ),
-                if (controller.isEditing) const SizedBox(height: 16),
+                if (controller.isEditing) AppSpacing.gapBase,
                 AppTextField(
                   controller: controller.noteField,
                   label: 'Note',
@@ -103,8 +105,9 @@ class PlanFormPage extends GetView<PlanFormController> {
                 child: controller.isSubmitting.value
                     ? const SizedBox.square(
                         dimension: 20,
-                        child:
-                            CircularProgressIndicator.adaptive(strokeWidth: 2),
+                        child: CircularProgressIndicator.adaptive(
+                          strokeWidth: 2,
+                        ),
                       )
                     : Text(
                         controller.isEditing ? 'Save changes' : 'Create plan',

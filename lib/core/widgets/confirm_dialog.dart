@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-
 /// Confirmation for destructive actions. Returns true only on explicit confirm.
 class ConfirmDialog {
   const ConfirmDialog._();

@@ -23,8 +23,8 @@ class AmountText extends StatelessWidget {
     this.style,
     this.showSign = false,
     this.compact = false,
-  })  : type = null,
-        colored = true;
+  }) : type = null,
+       colored = true;
 
   /// Neutral colour, used where the surrounding row already conveys direction.
   const AmountText.plain({
@@ -32,9 +32,9 @@ class AmountText extends StatelessWidget {
     required this.amount,
     this.style,
     this.compact = false,
-  })  : type = null,
-        showSign = false,
-        colored = false;
+  }) : type = null,
+       showSign = false,
+       colored = false;
 
   final double amount;
   final TransactionType? type;
@@ -57,17 +57,21 @@ class AmountText extends StatelessWidget {
   }
 
   String get _label {
-    final value = compact ? Money.compact(amount.abs()) : Money.format(amount.abs());
-    if (!showSign) return compact ? Money.compact(amount) : Money.format(amount);
+    final value = compact
+        ? Money.compact(amount.abs())
+        : Money.format(amount.abs());
+    if (!showSign) {
+      return compact ? Money.compact(amount) : Money.format(amount);
+    }
     return '$_prefix$value';
   }
 
   String get _prefix => switch (type) {
-        TransactionType.income => '+',
-        TransactionType.expense => '−',
-        TransactionType.transfer => '',
-        null => amount < 0 ? '−' : (amount > 0 ? '+' : ''),
-      };
+    TransactionType.income => '+',
+    TransactionType.expense => '−',
+    TransactionType.transfer => '',
+    null => amount < 0 ? '−' : (amount > 0 ? '+' : ''),
+  };
 
   Color? _color(BuildContext context) {
     if (type != null) {

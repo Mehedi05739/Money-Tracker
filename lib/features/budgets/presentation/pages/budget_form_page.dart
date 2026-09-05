@@ -8,6 +8,7 @@ import '../../../../core/widgets/category_avatar.dart';
 import '../../../../core/widgets/form_fields.dart';
 import '../../../transactions/presentation/widgets/picker_sheets.dart';
 import '../controllers/budget_form_controller.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class BudgetFormPage extends GetView<BudgetFormController> {
   const BudgetFormPage({super.key});
@@ -37,7 +38,7 @@ class BudgetFormPage extends GetView<BudgetFormController> {
                       errorText: controller.fieldErrors['amount'],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  AppSpacing.gapLg,
                   Obx(
                     () => SwitchListTile.adaptive(
                       contentPadding: EdgeInsets.zero,
@@ -81,7 +82,7 @@ class BudgetFormPage extends GetView<BudgetFormController> {
                       ),
                     );
                   }),
-                  const SizedBox(height: 16),
+                  AppSpacing.gapBase,
                   Obx(
                     () => AppPickerField(
                       label: 'Period',
@@ -97,17 +98,18 @@ class BudgetFormPage extends GetView<BudgetFormController> {
                       },
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.gapBase,
                   Obx(
                     () => AppPickerField(
                       label: 'Date range',
-                      value: '${AppDate.formatDate(controller.startDate.value)}'
+                      value:
+                          '${AppDate.formatDate(controller.startDate.value)}'
                           ' – ${AppDate.formatDate(controller.endDate.value)}',
                       trailingIcon: Icons.date_range_rounded,
                       onTap: () => _pickRange(context),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.gapBase,
                   Obx(
                     () => AppTextField(
                       controller: controller.alertField,
@@ -118,7 +120,7 @@ class BudgetFormPage extends GetView<BudgetFormController> {
                       errorText: controller.fieldErrors['alertPercentage'],
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  AppSpacing.gapSm,
                   Obx(
                     () => SwitchListTile.adaptive(
                       contentPadding: EdgeInsets.zero,

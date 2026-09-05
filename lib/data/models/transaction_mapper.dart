@@ -17,28 +17,28 @@ class TransactionMapper {
   static const String aliasToAccountName = 'to_account_name';
 
   static MoneyTransaction fromRow(Map<String, Object?> row) => MoneyTransaction(
-        id: row.readInt(TransactionColumns.id),
-        accountId: row.readInt(TransactionColumns.accountId),
-        toAccountId: row.readIntOrNull(TransactionColumns.toAccountId),
-        type: TransactionType.fromName(row[TransactionColumns.type] as String?),
-        amount: row.readDouble(TransactionColumns.amount),
-        categoryId: row.readIntOrNull(TransactionColumns.categoryId),
-        title: row.readString(TransactionColumns.title),
-        description: row.readStringOrNull(TransactionColumns.description),
-        transactionDate: row.readDate(TransactionColumns.transactionDate),
-        paymentMethod: PaymentMethod.fromName(
-          row[TransactionColumns.paymentMethod] as String?,
-        ),
-        note: row.readStringOrNull(TransactionColumns.note),
-        recurringId: row.readIntOrNull(TransactionColumns.recurringId),
-        createdAt: row.readDate(TransactionColumns.createdAt),
-        updatedAt: row.readDate(TransactionColumns.updatedAt),
-        categoryName: row.readStringOrNull(aliasCategoryName),
-        categoryIcon: row.readStringOrNull(aliasCategoryIcon),
-        categoryColor: row.readIntOrNull(aliasCategoryColor),
-        accountName: row.readStringOrNull(aliasAccountName),
-        toAccountName: row.readStringOrNull(aliasToAccountName),
-      );
+    id: row.readInt(TransactionColumns.id),
+    accountId: row.readInt(TransactionColumns.accountId),
+    toAccountId: row.readIntOrNull(TransactionColumns.toAccountId),
+    type: TransactionType.fromName(row[TransactionColumns.type] as String?),
+    amount: row.readDouble(TransactionColumns.amount),
+    categoryId: row.readIntOrNull(TransactionColumns.categoryId),
+    title: row.readString(TransactionColumns.title),
+    description: row.readStringOrNull(TransactionColumns.description),
+    transactionDate: row.readDate(TransactionColumns.transactionDate),
+    paymentMethod: PaymentMethod.fromName(
+      row[TransactionColumns.paymentMethod] as String?,
+    ),
+    note: row.readStringOrNull(TransactionColumns.note),
+    recurringId: row.readIntOrNull(TransactionColumns.recurringId),
+    createdAt: row.readDate(TransactionColumns.createdAt),
+    updatedAt: row.readDate(TransactionColumns.updatedAt),
+    categoryName: row.readStringOrNull(aliasCategoryName),
+    categoryIcon: row.readStringOrNull(aliasCategoryIcon),
+    categoryColor: row.readIntOrNull(aliasCategoryColor),
+    accountName: row.readStringOrNull(aliasAccountName),
+    toAccountName: row.readStringOrNull(aliasToAccountName),
+  );
 
   static Map<String, Object?> toRow(
     MoneyTransaction transaction, {
@@ -53,8 +53,9 @@ class TransactionMapper {
       TransactionColumns.categoryId: transaction.categoryId,
       TransactionColumns.title: transaction.title.trim(),
       TransactionColumns.description: transaction.description,
-      TransactionColumns.transactionDate:
-          AppDate.toDb(transaction.transactionDate),
+      TransactionColumns.transactionDate: AppDate.toDb(
+        transaction.transactionDate,
+      ),
       TransactionColumns.paymentMethod: transaction.paymentMethod?.name,
       TransactionColumns.note: transaction.note,
       TransactionColumns.recurringId: transaction.recurringId,

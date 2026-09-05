@@ -10,6 +10,7 @@ import '../../../../core/widgets/category_avatar.dart';
 import '../../../../core/widgets/form_fields.dart';
 import '../../../transactions/presentation/widgets/picker_sheets.dart';
 import '../controllers/recurring_form_controller.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class RecurringFormPage extends GetView<RecurringFormController> {
   const RecurringFormPage({super.key});
@@ -45,7 +46,7 @@ class RecurringFormPage extends GetView<RecurringFormController> {
                       onChanged: controller.changeType,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  AppSpacing.gapLg,
                   Obx(
                     () => AmountField(
                       controller: controller.amountField,
@@ -53,7 +54,7 @@ class RecurringFormPage extends GetView<RecurringFormController> {
                       errorText: controller.fieldErrors['amount'],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.gapBase,
                   Obx(() {
                     final category = controller.category.value;
                     return AppPickerField(
@@ -77,7 +78,7 @@ class RecurringFormPage extends GetView<RecurringFormController> {
                       },
                     );
                   }),
-                  const SizedBox(height: 16),
+                  AppSpacing.gapBase,
                   Obx(
                     () => AppPickerField(
                       label: 'Account',
@@ -92,16 +93,16 @@ class RecurringFormPage extends GetView<RecurringFormController> {
                       },
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.gapBase,
                   AppTextField(
                     controller: controller.titleField,
                     label: 'Title',
                     hint: 'Rent, Salary, Netflix…',
                     maxLength: 60,
                   ),
-                  const SizedBox(height: 24),
+                  AppSpacing.gapXl,
                   Text('Schedule', style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 12),
+                  AppSpacing.gapMd,
                   Obx(
                     () => AppPickerField(
                       label: 'Repeats',
@@ -109,16 +110,16 @@ class RecurringFormPage extends GetView<RecurringFormController> {
                       onTap: () async {
                         final picked =
                             await PickerSheets.options<RecurrenceFrequency>(
-                          title: 'How often?',
-                          values: RecurrenceFrequency.values,
-                          labelOf: (frequency) => frequency.label,
-                          selected: controller.frequency.value,
-                        );
+                              title: 'How often?',
+                              values: RecurrenceFrequency.values,
+                              labelOf: (frequency) => frequency.label,
+                              selected: controller.frequency.value,
+                            );
                         if (picked != null) controller.changeFrequency(picked);
                       },
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.gapBase,
                   Obx(
                     () => AppTextField(
                       controller: controller.intervalField,
@@ -129,7 +130,7 @@ class RecurringFormPage extends GetView<RecurringFormController> {
                       errorText: controller.fieldErrors['interval'],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.gapBase,
                   Obx(
                     () => AppPickerField(
                       label: 'Starts on',
@@ -138,7 +139,7 @@ class RecurringFormPage extends GetView<RecurringFormController> {
                       onTap: () => _pickStart(context),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  AppSpacing.gapBase,
                   Obx(
                     () => AppPickerField(
                       label: 'Ends on',
@@ -151,7 +152,7 @@ class RecurringFormPage extends GetView<RecurringFormController> {
                       onTap: () => _pickEnd(context),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  AppSpacing.gapSm,
                   Obx(
                     () => SwitchListTile.adaptive(
                       contentPadding: EdgeInsets.zero,
@@ -175,7 +176,7 @@ class RecurringFormPage extends GetView<RecurringFormController> {
                       title: const Text('Active'),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  AppSpacing.gapSm,
                   AppTextField(
                     controller: controller.noteField,
                     label: 'Note',

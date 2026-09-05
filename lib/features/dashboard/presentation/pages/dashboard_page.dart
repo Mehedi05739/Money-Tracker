@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../../core/base/view_state.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_empty_view.dart';
 import '../../../../core/widgets/app_error_view.dart';
 import '../../../../core/widgets/app_loader.dart';
+import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/widgets/charts/grouped_bar_chart.dart';
 import '../../../../core/widgets/date_range_selector.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../../../core/widgets/stat_tile.dart';
-import '../../../../core/base/view_state.dart';
 import '../../../../domain/entities/analytics.dart';
 import '../../../../routes/app_routes.dart';
 import '../../../transactions/presentation/pages/transaction_form_page.dart';
@@ -19,11 +22,15 @@ import '../../../transactions/presentation/widgets/quick_add_sheet.dart';
 import '../../../transactions/presentation/widgets/transaction_tile.dart';
 import '../controllers/dashboard_controller.dart';
 import '../widgets/balance_header.dart';
-import '../widgets/budget_alert_card.dart';
+import '../widgets/budget_summary_card.dart';
 import '../widgets/category_breakdown_card.dart';
 import '../widgets/goal_progress_strip.dart';
 import '../widgets/plan_progress_card.dart';
 
+/// The dashboard answers, in order: what do I have, what came in and went out,
+/// am I saving, am I within budget, where is it going, and what happened
+/// recently. Anything that does not serve one of those questions is a tap away
+/// rather than on this screen.
 class DashboardPage extends GetView<DashboardController> {
   const DashboardPage({super.key});
 
@@ -50,9 +57,6 @@ class DashboardPage extends GetView<DashboardController> {
         child: Obx(() {
           final state = controller.state;
 
-          if (state is LoadingState || state is IdleState) {
-            return const AppLoader();
-          }
           if (state is ErrorState) {
             return AppErrorView(
               message: state.message,
@@ -61,9 +65,13 @@ class DashboardPage extends GetView<DashboardController> {
           }
 
           final summary = controller.summary.value;
-          if (summary == null) return const AppLoader();
+          if (state is LoadingState || state is IdleState || summary == null) {
+            return const AppLoader();
+          }
 
-          return _DashboardBody(summary: summary, controller: controller);
+          return ContentWidth(
+            child: _DashboardBody(summary: summary, controller: controller),
+          );
         }),
       ),
     );
@@ -79,11 +87,17 @@ class _DashboardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.only(bottom: 96),
+      padding: const EdgeInsets.only(bottom: AppSpacing.fabClearance),
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
+        // 1 — balance, with income and expense beneath it.
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.base,
+            AppSpacing.sm,
+            AppSpacing.base,
+            AppSpacing.md,
+          ),
           child: BalanceHeader(summary: summary),
         ),
         Obx(
@@ -92,70 +106,52 @@ class _DashboardBody extends StatelessWidget {
             onChanged: controller.changeRange,
           ),
         ),
-        const SizedBox(height: 16),
-        _MetricGrid(summary: summary),
+        AppSpacing.gapBase,
+
+        // 2 — savings, and what today has cost so far.
+        _MetricRow(summary: summary),
+
+        // 3 — budget status.
         Obx(() {
-          final alerts = controller.alerts;
-          if (alerts.isEmpty) return const SizedBox.shrink();
+          if (controller.budgets.isEmpty) return const SizedBox.shrink();
           return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: BudgetAlertCard(
-              alerts: alerts,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.base,
+              AppSpacing.base,
+              AppSpacing.base,
+              0,
+            ),
+            child: BudgetSummaryCard(
+              statuses: controller.budgets,
               onTap: () => Get.toNamed(AppRoutes.budgets),
             ),
           );
         }),
-        Obx(() {
-          final plan = controller.currentPlan.value;
-          if (plan == null) return const SizedBox.shrink();
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SectionHeader(title: 'Spending plan'),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: PlanProgressCard(
-                  progress: plan,
-                  onTap: () => Get.toNamed(
-                    AppRoutes.spendingPlanDetail,
-                    arguments: plan.plan.id,
-                  ),
-                ),
-              ),
-            ],
-          );
-        }),
-        Obx(() {
-          final goals = controller.goals;
-          if (goals.isEmpty) return const SizedBox.shrink();
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SectionHeader(
-                title: 'Goals',
-                actionLabel: 'View all',
-                onAction: () => Get.toNamed(AppRoutes.goals),
-              ),
-              GoalProgressStrip(
-                goals: goals,
-                onTapGoal: (goal) => Get.toNamed(
-                  AppRoutes.goalDetail,
-                  arguments: goal.id,
-                ),
-              ),
-            ],
-          );
-        }),
-        const SectionHeader(title: 'Income vs expense'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: _TrendCard(trend: summary.trend),
-        ),
+
+        // 4 — spending overview.
         const SectionHeader(title: 'Where your money goes'),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: AppSpacing.screenH,
           child: CategoryBreakdownCard(categories: summary.topCategories),
         ),
+        const SectionHeader(title: 'Income vs expense'),
+        Padding(
+          padding: AppSpacing.screenH,
+          child: AppCard(
+            child: GroupedBarChart(
+              groups: [
+                for (final point in summary.trend)
+                  BarGroup(
+                    label: point.label,
+                    income: point.income,
+                    expense: point.expense,
+                  ),
+              ],
+            ),
+          ),
+        ),
+
+        // 5 — recent activity.
         SectionHeader(
           title: 'Recent activity',
           actionLabel: 'See all',
@@ -188,98 +184,91 @@ class _DashboardBody extends StatelessWidget {
             ],
           );
         }),
+
+        // Secondary: plans and goals, below the questions above.
+        Obx(() {
+          final plan = controller.currentPlan.value;
+          if (plan == null) return const SizedBox.shrink();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(title: 'Spending plan'),
+              Padding(
+                padding: AppSpacing.screenH,
+                child: PlanProgressCard(
+                  progress: plan,
+                  onTap: () => Get.toNamed(
+                    AppRoutes.spendingPlanDetail,
+                    arguments: plan.plan.id,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }),
+        Obx(() {
+          final goals = controller.goals;
+          if (goals.isEmpty) return const SizedBox.shrink();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SectionHeader(
+                title: 'Goals',
+                actionLabel: 'View all',
+                onAction: () => Get.toNamed(AppRoutes.goals),
+              ),
+              GoalProgressStrip(
+                goals: goals,
+                onTapGoal: (goal) =>
+                    Get.toNamed(AppRoutes.goalDetail, arguments: goal.id),
+              ),
+            ],
+          );
+        }),
       ],
     );
   }
 }
 
-class _MetricGrid extends StatelessWidget {
-  const _MetricGrid({required this.summary});
+/// Savings and today's spend. Monthly totals and averages live in Reports —
+/// repeating them here is what turns a dashboard into a wall of numbers.
+class _MetricRow extends StatelessWidget {
+  const _MetricRow({required this.summary});
 
   final DashboardSummary summary;
 
   @override
   Widget build(BuildContext context) {
     final totals = summary.totals;
-    final savingsPositive = totals.netSavings >= 0;
+    final positive = totals.netSavings >= 0;
+
+    final tiles = <Widget>[
+      StatTile(
+        label: positive ? 'Saved' : 'Overspent',
+        icon: Icons.savings_outlined,
+        value: Money.compact(totals.netSavings.abs()),
+        valueColor: positive ? context.incomeColor : context.expenseColor,
+        footnote: '${totals.savingsRate.toStringAsFixed(0)}% of income kept',
+      ),
+      StatTile(
+        label: 'Spent today',
+        icon: Icons.today_outlined,
+        value: Money.compact(summary.todaySpend),
+        footnote: summary.highestCategory == null
+            ? null
+            : 'Top: ${summary.highestCategory!.categoryName}',
+      ),
+    ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
+      padding: AppSpacing.screenH,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: StatTile(
-                  label: 'Net savings',
-                  icon: Icons.savings_outlined,
-                  value: Money.compact(totals.netSavings),
-                  valueColor: savingsPositive
-                      ? context.incomeColor
-                      : context.expenseColor,
-                  footnote:
-                      '${totals.savingsRate.toStringAsFixed(0)}% of income',
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: StatTile(
-                  label: 'Spent today',
-                  icon: Icons.today_outlined,
-                  value: Money.compact(summary.todaySpend),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: StatTile(
-                  label: 'This month',
-                  icon: Icons.calendar_month_outlined,
-                  value: Money.compact(summary.monthSpend),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: StatTile(
-                  label: 'Avg / day',
-                  icon: Icons.timeline_outlined,
-                  value: Money.compact(totals.averageDailySpend),
-                  footnote: summary.highestCategory == null
-                      ? null
-                      : 'Top: ${summary.highestCategory!.categoryName}',
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrendCard extends StatelessWidget {
-  const _TrendCard({required this.trend});
-
-  final List<TrendPoint> trend;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: GroupedBarChart(
-          groups: [
-            for (final point in trend)
-              BarGroup(
-                label: point.label,
-                income: point.income,
-                expense: point.expense,
-              ),
+          for (var i = 0; i < tiles.length; i++) ...[
+            if (i > 0) AppSpacing.hGapMd,
+            Expanded(child: tiles[i]),
           ],
-        ),
+        ],
       ),
     );
   }

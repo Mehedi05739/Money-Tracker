@@ -17,11 +17,11 @@ class AppSnackbar {
       _show(message, title: title, icon: Icons.check_circle_rounded);
 
   static void error(String message, {String? title}) => _show(
-        message,
-        title: title ?? 'Something went wrong',
-        icon: Icons.error_outline_rounded,
-        isError: true,
-      );
+    message,
+    title: title ?? 'Something went wrong',
+    icon: Icons.error_outline_rounded,
+    isError: true,
+  );
 
   static void info(String message, {String? title}) =>
       _show(message, title: title, icon: Icons.info_outline_rounded);

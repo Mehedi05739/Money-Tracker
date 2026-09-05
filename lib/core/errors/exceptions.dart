@@ -18,7 +18,7 @@ class ServerException extends AppException {
 
 class UnauthorizedException extends AppException {
   const UnauthorizedException([super.message = 'Unauthorized'])
-      : super(statusCode: 401);
+    : super(statusCode: 401);
 }
 
 class NetworkException extends AppException {

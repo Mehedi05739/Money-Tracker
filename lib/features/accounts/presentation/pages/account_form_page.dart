@@ -7,6 +7,7 @@ import '../../../../core/theme/category_icons.dart';
 import '../../../../core/widgets/form_fields.dart';
 import '../../../transactions/presentation/widgets/picker_sheets.dart';
 import '../controllers/account_form_controller.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class AccountFormPage extends GetView<AccountFormController> {
   const AccountFormPage({super.key});
@@ -33,7 +34,7 @@ class AccountFormPage extends GetView<AccountFormController> {
                     errorText: controller.fieldErrors['name'],
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapBase,
                 Obx(
                   () => AppPickerField(
                     label: 'Account type',
@@ -49,7 +50,7 @@ class AccountFormPage extends GetView<AccountFormController> {
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapBase,
                 Obx(
                   () => AmountField(
                     controller: controller.openingBalanceField,
@@ -68,15 +69,17 @@ class AccountFormPage extends GetView<AccountFormController> {
                       'Changing the opening balance shifts this account’s '
                       'current balance by the same amount.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   );
                 }),
-                const SizedBox(height: 20),
-                Text('Appearance', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 12),
+                AppSpacing.gapLg,
+                Text(
+                  'Appearance',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                AppSpacing.gapMd,
                 Obx(
                   () => AppPickerField(
                     label: 'Icon',
@@ -93,7 +96,7 @@ class AccountFormPage extends GetView<AccountFormController> {
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapBase,
                 Obx(
                   () => _ColorPicker(
                     selected: controller.color.value,
@@ -131,7 +134,7 @@ class _ColorPicker extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        const SizedBox(height: 10),
+        AppSpacing.gapSm,
         Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -153,8 +156,11 @@ class _ColorPicker extends StatelessWidget {
                     ),
                   ),
                   child: selected == color.toARGB32()
-                      ? const Icon(Icons.check_rounded,
-                          color: Colors.white, size: 18)
+                      ? const Icon(
+                          Icons.check_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        )
                       : null,
                 ),
               ),

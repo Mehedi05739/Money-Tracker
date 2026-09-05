@@ -14,6 +14,7 @@ import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../domain/entities/financial_goal.dart';
 import '../../../../routes/app_routes.dart';
 import '../controllers/goals_controller.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class GoalsPage extends GetView<GoalsController> {
   const GoalsPage({super.key});
@@ -34,19 +35,22 @@ class GoalsPage extends GetView<GoalsController> {
 
           return switch (state) {
             IdleState() || LoadingState() => const AppLoader(),
-            ErrorState(:final message) =>
-              AppErrorView(message: message, onRetry: controller.load),
+            ErrorState(:final message) => AppErrorView(
+              message: message,
+              onRetry: controller.load,
+            ),
             EmptyState() => AppEmptyView(
-                title: 'No goals yet',
-                message: 'Set a target — an emergency fund, a laptop, a trip — '
-                    'and track every contribution towards it.',
-                icon: Icons.flag_outlined,
-                action: FilledButton.icon(
-                  onPressed: () => _openForm(),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Create a goal'),
-                ),
+              title: 'No goals yet',
+              message:
+                  'Set a target — an emergency fund, a laptop, a trip — '
+                  'and track every contribution towards it.',
+              icon: Icons.flag_outlined,
+              action: FilledButton.icon(
+                onPressed: () => _openForm(),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Create a goal'),
               ),
+            ),
             LoadedState() => _GoalList(controller: controller),
           };
         }),
@@ -87,7 +91,7 @@ class _GoalList extends StatelessWidget {
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      AppSpacing.gapXs,
                       Text(
                         Money.format(controller.totalSaved),
                         style: theme.textTheme.headlineMedium,
@@ -110,7 +114,7 @@ class _GoalList extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        AppSpacing.gapBase,
         Obx(
           () => Column(
             children: [
@@ -120,7 +124,7 @@ class _GoalList extends StatelessWidget {
                   seed: i,
                   controller: controller,
                 ),
-                const SizedBox(height: 12),
+                AppSpacing.gapMd,
               ],
             ],
           ),
@@ -169,7 +173,7 @@ class _GoalCard extends StatelessWidget {
                   size: 20,
                 ),
               ),
-              const SizedBox(width: 12),
+              AppSpacing.hGapMd,
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,7 +184,7 @@ class _GoalCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall,
                     ),
-                    const SizedBox(height: 2),
+                    AppSpacing.gapXxs,
                     Text(
                       _subtitle,
                       maxLines: 1,
@@ -208,7 +212,7 @@ class _GoalCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 14),
+          AppSpacing.gapMd,
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -216,7 +220,7 @@ class _GoalCard extends StatelessWidget {
                 Money.format(goal.currentAmount),
                 style: theme.textTheme.titleLarge?.copyWith(color: color),
               ),
-              const SizedBox(width: 6),
+              AppSpacing.hGapSm,
               Padding(
                 padding: const EdgeInsets.only(bottom: 2),
                 child: Text(
@@ -233,14 +237,14 @@ class _GoalCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          AppSpacing.gapSm,
           AppProgressBar(
             value: goal.progressPercent / 100,
             color: color,
             warningThreshold: 2,
           ),
           if (!goal.isAchieved && goal.requiredMonthlyContribution != null) ...[
-            const SizedBox(height: 8),
+            AppSpacing.gapSm,
             Text(
               'Save ${Money.format(goal.requiredMonthlyContribution!)} a month '
               'to finish on time',
@@ -265,7 +269,8 @@ class _GoalCard extends StatelessWidget {
   Future<void> _confirmDelete() async {
     final confirmed = await ConfirmDialog.show(
       title: 'Delete ${goal.name}?',
-      message: 'The goal and its contribution history will be removed. '
+      message:
+          'The goal and its contribution history will be removed. '
           'Your account balances are not affected.',
     );
     if (confirmed) await controller.delete(goal);

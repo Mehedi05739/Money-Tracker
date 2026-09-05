@@ -14,7 +14,8 @@ class TransactionDao {
 
   final Database _db;
 
-  static const String _selectWithJoins = '''
+  static const String _selectWithJoins =
+      '''
     SELECT t.*,
            c.${CategoryColumns.name}  AS ${TransactionMapper.aliasCategoryName},
            c.${CategoryColumns.icon}  AS ${TransactionMapper.aliasCategoryIcon},
@@ -143,8 +144,7 @@ class TransactionDao {
     DatabaseExecutor txn,
     MoneyTransaction transaction,
     int direction,
-  ) =>
-      _adjustBalance(txn, transaction, direction);
+  ) => _adjustBalance(txn, transaction, direction);
 
   /// Moves account balances by [transaction]'s effect, multiplied by
   /// [direction] (`1` to apply, `-1` to reverse).
@@ -183,10 +183,10 @@ class TransactionDao {
     final args = <Object?>[];
 
     if (filter.range != null) {
-      conditions.add(
-        't.${TransactionColumns.transactionDate} BETWEEN ? AND ?',
-      );
-      args..add(filter.range!.startDb)..add(filter.range!.endDb);
+      conditions.add('t.${TransactionColumns.transactionDate} BETWEEN ? AND ?');
+      args
+        ..add(filter.range!.startDb)
+        ..add(filter.range!.endDb);
     }
 
     if (filter.types.isNotEmpty) {
@@ -196,18 +196,26 @@ class TransactionDao {
     }
 
     if (filter.categoryIds.isNotEmpty) {
-      final placeholders = List.filled(filter.categoryIds.length, '?').join(', ');
+      final placeholders = List.filled(
+        filter.categoryIds.length,
+        '?',
+      ).join(', ');
       conditions.add('t.${TransactionColumns.categoryId} IN ($placeholders)');
       args.addAll(filter.categoryIds);
     }
 
     if (filter.accountIds.isNotEmpty) {
-      final placeholders = List.filled(filter.accountIds.length, '?').join(', ');
+      final placeholders = List.filled(
+        filter.accountIds.length,
+        '?',
+      ).join(', ');
       conditions.add(
         '(t.${TransactionColumns.accountId} IN ($placeholders) '
         'OR t.${TransactionColumns.toAccountId} IN ($placeholders))',
       );
-      args..addAll(filter.accountIds)..addAll(filter.accountIds);
+      args
+        ..addAll(filter.accountIds)
+        ..addAll(filter.accountIds);
     }
 
     final search = filter.search?.trim();
@@ -218,7 +226,10 @@ class TransactionDao {
         "OR t.${TransactionColumns.description} LIKE ? ESCAPE '\\')",
       );
       final pattern = '%${_escapeLike(search)}%';
-      args..add(pattern)..add(pattern)..add(pattern);
+      args
+        ..add(pattern)
+        ..add(pattern)
+        ..add(pattern);
     }
 
     if (filter.minAmount != null) {

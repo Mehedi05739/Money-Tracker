@@ -15,6 +15,7 @@ import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../domain/entities/recurring_transaction.dart';
 import '../../../../routes/app_routes.dart';
 import '../controllers/recurring_controller.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class RecurringPage extends GetView<RecurringController> {
   const RecurringPage({super.key});
@@ -28,8 +29,9 @@ class RecurringPage extends GetView<RecurringController> {
           Obx(
             () => IconButton(
               tooltip: 'Post everything due',
-              onPressed:
-                  controller.isPosting.value ? null : controller.postDueNow,
+              onPressed: controller.isPosting.value
+                  ? null
+                  : controller.postDueNow,
               icon: controller.isPosting.value
                   ? const SizedBox.square(
                       dimension: 18,
@@ -52,19 +54,22 @@ class RecurringPage extends GetView<RecurringController> {
 
           return switch (state) {
             IdleState() || LoadingState() => const AppLoader(),
-            ErrorState(:final message) =>
-              AppErrorView(message: message, onRetry: controller.load),
+            ErrorState(:final message) => AppErrorView(
+              message: message,
+              onRetry: controller.load,
+            ),
             EmptyState() => AppEmptyView(
-                title: 'No recurring transactions',
-                message: 'Schedule rent, salary or subscriptions once and they '
-                    'are recorded automatically each period.',
-                icon: Icons.autorenew_rounded,
-                action: FilledButton.icon(
-                  onPressed: () => _openForm(),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Add a schedule'),
-                ),
+              title: 'No recurring transactions',
+              message:
+                  'Schedule rent, salary or subscriptions once and they '
+                  'are recorded automatically each period.',
+              icon: Icons.autorenew_rounded,
+              action: FilledButton.icon(
+                onPressed: () => _openForm(),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Add a schedule'),
               ),
+            ),
             LoadedState() => _RecurringList(controller: controller),
           };
         }),
@@ -73,8 +78,10 @@ class RecurringPage extends GetView<RecurringController> {
   }
 
   Future<void> _openForm([Object? argument]) async {
-    final saved =
-        await Get.toNamed(AppRoutes.recurringForm, arguments: argument);
+    final saved = await Get.toNamed(
+      AppRoutes.recurringForm,
+      arguments: argument,
+    );
     if (saved == true) await controller.load(showLoader: false);
   }
 }
@@ -97,18 +104,15 @@ class _RecurringList extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Monthly commitments',
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4),
+                Text('Monthly commitments', style: theme.textTheme.titleMedium),
+                AppSpacing.gapXs,
                 Text(
                   'Each schedule normalised to a per-month figure',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 14),
+                AppSpacing.gapMd,
                 Row(
                   children: [
                     Expanded(
@@ -140,13 +144,13 @@ class _RecurringList extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        AppSpacing.gapBase,
         Obx(
           () => Column(
             children: [
               for (final rule in controller.rules) ...[
                 _RuleCard(rule: rule, controller: controller),
-                const SizedBox(height: 12),
+                AppSpacing.gapMd,
               ],
             ],
           ),
@@ -168,8 +172,10 @@ class _RuleCard extends StatelessWidget {
 
     return AppCard(
       onTap: () async {
-        final saved =
-            await Get.toNamed(AppRoutes.recurringForm, arguments: rule);
+        final saved = await Get.toNamed(
+          AppRoutes.recurringForm,
+          arguments: rule,
+        );
         if (saved == true) await controller.load(showLoader: false);
       },
       child: Column(
@@ -183,7 +189,7 @@ class _RuleCard extends StatelessWidget {
                 seed: rule.categoryId ?? 0,
                 size: 38,
               ),
-              const SizedBox(width: 12),
+              AppSpacing.hGapMd,
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,7 +200,7 @@ class _RuleCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall,
                     ),
-                    const SizedBox(height: 2),
+                    AppSpacing.gapXxs,
                     Text(
                       '${rule.frequency.label}'
                       '${rule.intervalCount > 1 ? ' ×${rule.intervalCount}' : ''}'
@@ -215,7 +221,7 @@ class _RuleCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          AppSpacing.gapMd,
           Row(
             children: [
               Icon(
@@ -225,7 +231,7 @@ class _RuleCard extends StatelessWidget {
                     ? context.warningColor
                     : theme.colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(width: 6),
+              AppSpacing.hGapSm,
               Expanded(
                 child: Text(
                   _scheduleLabel,
@@ -270,7 +276,8 @@ class _RuleCard extends StatelessWidget {
   Future<void> _confirmDelete() async {
     final confirmed = await ConfirmDialog.show(
       title: 'Delete this schedule?',
-      message: 'Transactions already recorded from it are kept. '
+      message:
+          'Transactions already recorded from it are kept. '
           'Only future occurrences stop.',
     );
     if (confirmed) await controller.delete(rule);

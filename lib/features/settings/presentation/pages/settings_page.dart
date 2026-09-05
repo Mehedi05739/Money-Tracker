@@ -10,6 +10,7 @@ import '../../../../domain/entities/account.dart';
 import '../../../../domain/repositories/account_repository.dart';
 import '../../../transactions/presentation/widgets/picker_sheets.dart';
 import '../controllers/settings_controller.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class SettingsPage extends GetView<SettingsController> {
   const SettingsPage({super.key});
@@ -63,7 +64,7 @@ class SettingsPage extends GetView<SettingsController> {
                       controller.currency.value.symbol,
                       style: theme.textTheme.headlineSmall,
                     ),
-                    const SizedBox(width: 14),
+                    AppSpacing.hGapMd,
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,7 +102,7 @@ class SettingsPage extends GetView<SettingsController> {
                     Icons.account_balance_wallet_outlined,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  const SizedBox(width: 14),
+                  AppSpacing.hGapMd,
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -138,7 +139,7 @@ class SettingsPage extends GetView<SettingsController> {
                     Icons.calculate_outlined,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  const SizedBox(width: 14),
+                  AppSpacing.hGapMd,
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,14 +189,14 @@ class SettingsPage extends GetView<SettingsController> {
                         size: 18,
                         color: theme.colorScheme.primary,
                       ),
-                      const SizedBox(width: 10),
+                      AppSpacing.hGapSm,
                       Text(
                         'Your data stays on this device',
                         style: theme.textTheme.titleSmall,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  AppSpacing.gapSm,
                   Text(
                     '${AppConstants.appName} stores everything in a local '
                     'database. Nothing is uploaded, synced or shared.',
@@ -213,10 +214,10 @@ class SettingsPage extends GetView<SettingsController> {
   }
 
   static String _themeLabel(ThemeMode mode) => switch (mode) {
-        ThemeMode.system => 'Match system',
-        ThemeMode.light => 'Light',
-        ThemeMode.dark => 'Dark',
-      };
+    ThemeMode.system => 'Match system',
+    ThemeMode.light => 'Light',
+    ThemeMode.dark => 'Dark',
+  };
 
   Future<void> _pickCurrency() async {
     final picked = await PickerSheets.options<SupportedCurrency>(
@@ -251,7 +252,8 @@ class SettingsPage extends GetView<SettingsController> {
   Future<void> _recalculate() async {
     final confirmed = await ConfirmDialog.show(
       title: 'Recalculate balances?',
-      message: 'Every account balance is rebuilt from its opening balance plus '
+      message:
+          'Every account balance is rebuilt from its opening balance plus '
           'all recorded transactions. Nothing is deleted.',
       confirmLabel: 'Recalculate',
       destructive: false,

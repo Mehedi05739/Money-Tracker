@@ -8,18 +8,20 @@ class CategoryMapper {
   const CategoryMapper._();
 
   static Category fromRow(Map<String, Object?> row) => Category(
-        id: row.readInt(CategoryColumns.id),
-        name: row.readString(CategoryColumns.name),
-        type: TransactionType.fromName(row[CategoryColumns.type] as String?),
-        icon: row.readStringOrNull(CategoryColumns.icon),
-        color: row.readIntOrNull(CategoryColumns.color),
-        isDefault: row.readBool(CategoryColumns.isDefault),
-        isArchived: row.readBool(CategoryColumns.isArchived),
-        createdAt: row.readDate(CategoryColumns.createdAt),
-      );
+    id: row.readInt(CategoryColumns.id),
+    name: row.readString(CategoryColumns.name),
+    type: TransactionType.fromName(row[CategoryColumns.type] as String?),
+    icon: row.readStringOrNull(CategoryColumns.icon),
+    color: row.readIntOrNull(CategoryColumns.color),
+    isDefault: row.readBool(CategoryColumns.isDefault),
+    isArchived: row.readBool(CategoryColumns.isArchived),
+    createdAt: row.readDate(CategoryColumns.createdAt),
+  );
 
-  static Map<String, Object?> toRow(Category category,
-      {bool includeId = false}) {
+  static Map<String, Object?> toRow(
+    Category category, {
+    bool includeId = false,
+  }) {
     return {
       if (includeId) CategoryColumns.id: category.id,
       CategoryColumns.name: category.name.trim(),

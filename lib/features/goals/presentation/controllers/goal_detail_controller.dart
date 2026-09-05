@@ -85,8 +85,8 @@ class GoalDetailController extends BaseController {
           updated.isAchieved && amount > 0
               ? 'Goal reached'
               : amount >= 0
-                  ? 'Contribution added'
-                  : 'Withdrawal recorded',
+              ? 'Contribution added'
+              : 'Withdrawal recorded',
         );
         _events.emit(DataChange.goals);
         load(showLoader: false);

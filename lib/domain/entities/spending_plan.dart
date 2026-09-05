@@ -56,18 +56,17 @@ class SpendingPlan {
     PlanStatus? status,
     String? note,
     DateTime? updatedAt,
-  }) =>
-      SpendingPlan(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        totalLimit: totalLimit ?? this.totalLimit,
-        startDate: startDate ?? this.startDate,
-        endDate: endDate ?? this.endDate,
-        status: status ?? this.status,
-        note: note ?? this.note,
-        createdAt: createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-      );
+  }) => SpendingPlan(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    totalLimit: totalLimit ?? this.totalLimit,
+    startDate: startDate ?? this.startDate,
+    endDate: endDate ?? this.endDate,
+    status: status ?? this.status,
+    note: note ?? this.note,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
 
   @override
   bool operator ==(Object other) => other is SpendingPlan && other.id == id;
@@ -112,19 +111,18 @@ class SpendingPlanItem {
     double? plannedAmount,
     String? note,
     DateTime? updatedAt,
-  }) =>
-      SpendingPlanItem(
-        id: id ?? this.id,
-        planId: planId ?? this.planId,
-        categoryId: categoryId ?? this.categoryId,
-        plannedAmount: plannedAmount ?? this.plannedAmount,
-        note: note ?? this.note,
-        createdAt: createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        categoryName: categoryName,
-        categoryIcon: categoryIcon,
-        categoryColor: categoryColor,
-      );
+  }) => SpendingPlanItem(
+    id: id ?? this.id,
+    planId: planId ?? this.planId,
+    categoryId: categoryId ?? this.categoryId,
+    plannedAmount: plannedAmount ?? this.plannedAmount,
+    note: note ?? this.note,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    categoryName: categoryName,
+    categoryIcon: categoryIcon,
+    categoryColor: categoryColor,
+  );
 
   @override
   bool operator ==(Object other) => other is SpendingPlanItem && other.id == id;

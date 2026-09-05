@@ -11,14 +11,14 @@ enum DateRangePreset {
   custom;
 
   String get label => switch (this) {
-        DateRangePreset.today => 'Today',
-        DateRangePreset.thisWeek => 'This week',
-        DateRangePreset.thisMonth => 'This month',
-        DateRangePreset.lastMonth => 'Last month',
-        DateRangePreset.thisYear => 'This year',
-        DateRangePreset.allTime => 'All time',
-        DateRangePreset.custom => 'Custom',
-      };
+    DateRangePreset.today => 'Today',
+    DateRangePreset.thisWeek => 'This week',
+    DateRangePreset.thisMonth => 'This month',
+    DateRangePreset.lastMonth => 'Last month',
+    DateRangePreset.thisYear => 'This year',
+    DateRangePreset.allTime => 'All time',
+    DateRangePreset.custom => 'Custom',
+  };
 }
 
 /// An inclusive [start]–[end] window plus the preset it came from.
@@ -34,48 +34,48 @@ class DateRange {
 
     return switch (preset) {
       DateRangePreset.today => DateRange(
-          start: AppDate.startOfDay(today),
-          end: AppDate.endOfDay(today),
-          preset: preset,
-        ),
+        start: AppDate.startOfDay(today),
+        end: AppDate.endOfDay(today),
+        preset: preset,
+      ),
       DateRangePreset.thisWeek => DateRange(
-          start: AppDate.startOfWeek(today),
-          end: AppDate.endOfWeek(today),
-          preset: preset,
-        ),
+        start: AppDate.startOfWeek(today),
+        end: AppDate.endOfWeek(today),
+        preset: preset,
+      ),
       DateRangePreset.thisMonth => DateRange(
-          start: AppDate.startOfMonth(today),
-          end: AppDate.endOfMonth(today),
-          preset: preset,
-        ),
+        start: AppDate.startOfMonth(today),
+        end: AppDate.endOfMonth(today),
+        preset: preset,
+      ),
       DateRangePreset.lastMonth => DateRange(
-          start: AppDate.startOfMonth(AppDate.addMonths(today, -1)),
-          end: AppDate.endOfMonth(AppDate.addMonths(today, -1)),
-          preset: preset,
-        ),
+        start: AppDate.startOfMonth(AppDate.addMonths(today, -1)),
+        end: AppDate.endOfMonth(AppDate.addMonths(today, -1)),
+        preset: preset,
+      ),
       DateRangePreset.thisYear => DateRange(
-          start: AppDate.startOfYear(today),
-          end: AppDate.endOfYear(today),
-          preset: preset,
-        ),
+        start: AppDate.startOfYear(today),
+        end: AppDate.endOfYear(today),
+        preset: preset,
+      ),
       DateRangePreset.allTime => DateRange(
-          start: DateTime(2000),
-          end: AppDate.endOfDay(today),
-          preset: preset,
-        ),
+        start: DateTime(2000),
+        end: AppDate.endOfDay(today),
+        preset: preset,
+      ),
       DateRangePreset.custom => DateRange(
-          start: AppDate.startOfMonth(today),
-          end: AppDate.endOfMonth(today),
-          preset: preset,
-        ),
+        start: AppDate.startOfMonth(today),
+        end: AppDate.endOfMonth(today),
+        preset: preset,
+      ),
     };
   }
 
   factory DateRange.custom(DateTime start, DateTime end) => DateRange(
-        start: AppDate.startOfDay(start),
-        end: AppDate.endOfDay(end),
-        preset: DateRangePreset.custom,
-      );
+    start: AppDate.startOfDay(start),
+    end: AppDate.endOfDay(end),
+    preset: DateRangePreset.custom,
+  );
 
   final DateTime start;
   final DateTime end;

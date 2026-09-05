@@ -200,10 +200,7 @@ class GoalsBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut(
-      () => GoalsController(
-        Get.find<GoalRepository>(),
-        Get.find<AppEvents>(),
-      ),
+      () => GoalsController(Get.find<GoalRepository>(), Get.find<AppEvents>()),
     );
   }
 }
@@ -212,10 +209,8 @@ class GoalFormBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut(
-      () => GoalFormController(
-        Get.find<GoalRepository>(),
-        Get.find<AppEvents>(),
-      ),
+      () =>
+          GoalFormController(Get.find<GoalRepository>(), Get.find<AppEvents>()),
     );
   }
 }

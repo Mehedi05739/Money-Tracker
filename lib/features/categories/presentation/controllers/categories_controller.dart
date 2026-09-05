@@ -29,8 +29,9 @@ class CategoriesController extends BaseController {
   Future<void> load({bool showLoader = true}) async {
     if (showLoader) setLoading();
 
-    final result =
-        await _repository.getCategories(includeArchived: showArchived.value);
+    final result = await _repository.getCategories(
+      includeArchived: showArchived.value,
+    );
 
     result.fold(
       onSuccess: (data) {
@@ -64,7 +65,9 @@ class CategoriesController extends BaseController {
     result.fold(
       onSuccess: (_) {
         _events.emit(DataChange.categories);
-        AppSnackbar.success(archived ? 'Category archived' : 'Category restored');
+        AppSnackbar.success(
+          archived ? 'Category archived' : 'Category restored',
+        );
         load(showLoader: false);
         return null;
       },

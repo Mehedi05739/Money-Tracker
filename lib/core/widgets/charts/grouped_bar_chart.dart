@@ -84,7 +84,10 @@ class GroupedBarChart extends StatelessWidget {
               children: [
                 for (final group in groups)
                   Padding(
-                    padding: EdgeInsets.only(right: groupSpacing / 2, left: groupSpacing / 2),
+                    padding: EdgeInsets.only(
+                      right: groupSpacing / 2,
+                      left: groupSpacing / 2,
+                    ),
                     child: _BarPair(
                       group: group,
                       maxValue: maxValue,
@@ -121,7 +124,8 @@ class _BarPair extends StatelessWidget {
     final plotHeight = height - 26;
 
     return Semantics(
-      label: '${group.label}: income ${Money.format(group.income)}, '
+      label:
+          '${group.label}: income ${Money.format(group.income)}, '
           'expense ${Money.format(group.expense)}',
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
@@ -181,7 +185,9 @@ class _Bar extends StatelessWidget {
     // A non-zero value always shows at least a sliver, so small amounts read
     // as present rather than missing.
     final fraction = maxValue <= 0 ? 0.0 : value / maxValue;
-    final target = value <= 0 ? 2.0 : (fraction * plotHeight).clamp(3.0, plotHeight);
+    final target = value <= 0
+        ? 2.0
+        : (fraction * plotHeight).clamp(3.0, plotHeight);
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: target),

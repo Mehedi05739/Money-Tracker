@@ -16,7 +16,8 @@ class SpendingPlanDao {
     final rows = await _db.query(
       Tables.spendingPlans,
       where: activeOnly ? "${SpendingPlanColumns.status} = 'active'" : null,
-      orderBy: '${SpendingPlanColumns.startDate} DESC, '
+      orderBy:
+          '${SpendingPlanColumns.startDate} DESC, '
           '${SpendingPlanColumns.id} DESC',
     );
     return rows.map(SpendingPlanMapper.fromRow).toList();
@@ -37,7 +38,8 @@ class SpendingPlanDao {
     final now = AppDate.toDb(DateTime.now());
     final rows = await _db.query(
       Tables.spendingPlans,
-      where: "${SpendingPlanColumns.status} = 'active' "
+      where:
+          "${SpendingPlanColumns.status} = 'active' "
           'AND ${SpendingPlanColumns.startDate} <= ? '
           'AND ${SpendingPlanColumns.endDate} >= ?',
       whereArgs: [now, now],
@@ -64,10 +66,10 @@ class SpendingPlanDao {
 
   /// Items cascade via the foreign key.
   Future<int> delete(int id) => _db.delete(
-        Tables.spendingPlans,
-        where: '${SpendingPlanColumns.id} = ?',
-        whereArgs: [id],
-      );
+    Tables.spendingPlans,
+    where: '${SpendingPlanColumns.id} = ?',
+    whereArgs: [id],
+  );
 
   Future<List<SpendingPlanItem>> findItems(int planId) async {
     final rows = await _db.rawQuery(
@@ -107,10 +109,10 @@ class SpendingPlanDao {
   }
 
   Future<int> deleteItem(int itemId) => _db.delete(
-        Tables.spendingPlanItems,
-        where: '${SpendingPlanItemColumns.id} = ?',
-        whereArgs: [itemId],
-      );
+    Tables.spendingPlanItems,
+    where: '${SpendingPlanItemColumns.id} = ?',
+    whereArgs: [itemId],
+  );
 
   /// Plan items paired with the actual spend in each allocated category, plus
   /// the plan-wide expense total — two queries rather than one per item.

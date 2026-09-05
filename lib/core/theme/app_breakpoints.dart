@@ -54,12 +54,7 @@ extension LayoutContext on BuildContext {
 
   /// Picks a value for the current width class, falling back to the nearest
   /// narrower value that was supplied.
-  T responsive<T>({
-    required T compact,
-    T? standard,
-    T? expanded,
-    T? wide,
-  }) {
+  T responsive<T>({required T compact, T? standard, T? expanded, T? wide}) {
     final standardValue = standard ?? compact;
     final expandedValue = expanded ?? standardValue;
     return switch (layout) {
@@ -76,11 +71,10 @@ extension LayoutContext on BuildContext {
     int? standard,
     int? expanded,
     int? wide,
-  }) =>
-      responsive<int>(
-        compact: compact,
-        standard: standard,
-        expanded: expanded,
-        wide: wide,
-      );
+  }) => responsive<int>(
+    compact: compact,
+    standard: standard,
+    expanded: expanded,
+    wide: wide,
+  );
 }

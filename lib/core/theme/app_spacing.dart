@@ -40,6 +40,7 @@ class AppSpacing {
 
   // ---- Const gaps ---------------------------------------------------------
 
+  static const Widget gapXxs = SizedBox(height: xxs);
   static const Widget gapXs = SizedBox(height: xs);
   static const Widget gapSm = SizedBox(height: sm);
   static const Widget gapMd = SizedBox(height: md);

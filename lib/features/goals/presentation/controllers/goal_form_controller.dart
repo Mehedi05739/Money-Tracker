@@ -83,8 +83,10 @@ class GoalFormController extends GetxController {
 
     fieldErrors.clear();
     final nameError = Validators.name(nameField.text, field: 'Goal name');
-    final targetError =
-        Validators.amount(targetField.text, field: 'Target amount');
+    final targetError = Validators.amount(
+      targetField.text,
+      field: 'Target amount',
+    );
 
     if (nameError != null) fieldErrors['name'] = nameError;
     if (targetError != null) fieldErrors['targetAmount'] = targetError;
@@ -110,8 +112,9 @@ class GoalFormController extends GetxController {
       updatedAt: now,
     );
 
-    final result =
-        isEditing ? await _repository.update(draft) : await _repository.create(draft);
+    final result = isEditing
+        ? await _repository.update(draft)
+        : await _repository.create(draft);
     isSubmitting.value = false;
 
     return result.fold(

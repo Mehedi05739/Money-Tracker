@@ -5,6 +5,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_progress_bar.dart';
 import '../../../../domain/entities/financial_goal.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 /// Horizontally scrolling goal cards.
 class GoalProgressStrip extends StatelessWidget {
@@ -25,7 +26,7 @@ class GoalProgressStrip extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: goals.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        separatorBuilder: (_, _) => AppSpacing.hGapMd,
         itemBuilder: (context, index) => SizedBox(
           width: 220,
           child: _GoalCard(
@@ -40,7 +41,11 @@ class GoalProgressStrip extends StatelessWidget {
 }
 
 class _GoalCard extends StatelessWidget {
-  const _GoalCard({required this.goal, required this.seed, required this.onTap});
+  const _GoalCard({
+    required this.goal,
+    required this.seed,
+    required this.onTap,
+  });
 
   final FinancialGoal goal;
   final int seed;
@@ -60,7 +65,7 @@ class _GoalCard extends StatelessWidget {
           Row(
             children: [
               Icon(CategoryIcons.resolve(goal.icon), size: 17, color: color),
-              const SizedBox(width: 8),
+              AppSpacing.hGapSm,
               Expanded(
                 child: Text(
                   goal.name,
@@ -82,18 +87,18 @@ class _GoalCard extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 10),
+          AppSpacing.gapSm,
           AppProgressBar(
             value: goal.progressPercent / 100,
             color: color,
             height: 6,
           ),
-          const SizedBox(height: 6),
+          AppSpacing.gapSm,
           Text(
             goal.isAchieved
                 ? 'Goal reached'
                 : '${goal.progressPercent.toStringAsFixed(0)}% · '
-                    '${Money.compact(goal.remainingAmount)} to go',
+                      '${Money.compact(goal.remainingAmount)} to go',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(

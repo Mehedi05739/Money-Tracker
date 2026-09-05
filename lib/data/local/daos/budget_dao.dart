@@ -12,7 +12,8 @@ class BudgetDao {
 
   final Database _db;
 
-  static const String _selectWithCategory = '''
+  static const String _selectWithCategory =
+      '''
     SELECT b.*,
            c.${CategoryColumns.name}  AS ${BudgetMapper.aliasCategoryName},
            c.${CategoryColumns.icon}  AS ${BudgetMapper.aliasCategoryIcon},
@@ -42,9 +43,8 @@ class BudgetDao {
       _db.insert(Tables.budgets, BudgetMapper.toRow(budget));
 
   Future<int> update(Budget budget) {
-    final row = BudgetMapper.toRow(
-      budget.copyWith(updatedAt: DateTime.now()),
-    )..remove(BudgetColumns.createdAt);
+    final row = BudgetMapper.toRow(budget.copyWith(updatedAt: DateTime.now()))
+      ..remove(BudgetColumns.createdAt);
     return _db.update(
       Tables.budgets,
       row,
@@ -54,10 +54,10 @@ class BudgetDao {
   }
 
   Future<int> delete(int id) => _db.delete(
-        Tables.budgets,
-        where: '${BudgetColumns.id} = ?',
-        whereArgs: [id],
-      );
+    Tables.budgets,
+    where: '${BudgetColumns.id} = ?',
+    whereArgs: [id],
+  );
 
   /// Budgets joined to their spend in one pass.
   ///
@@ -66,8 +66,7 @@ class BudgetDao {
   /// and the overall budget (`category_id IS NULL`).
   Future<List<BudgetStatus>> findWithSpend({bool currentOnly = true}) async {
     final now = AppDate.toDb(DateTime.now());
-    final rows = await _db.rawQuery(
-      '''
+    final rows = await _db.rawQuery('''
       SELECT b.*,
              c.${CategoryColumns.name}  AS ${BudgetMapper.aliasCategoryName},
              c.${CategoryColumns.icon}  AS ${BudgetMapper.aliasCategoryIcon},
@@ -87,9 +86,7 @@ class BudgetDao {
         AND b.${BudgetColumns.startDate} <= ?
         AND b.${BudgetColumns.endDate} >= ?''' : ''}
       ORDER BY b.${BudgetColumns.startDate} DESC, b.${BudgetColumns.id} DESC
-      ''',
-      currentOnly ? [now, now] : const [],
-    );
+      ''', currentOnly ? [now, now] : const []);
 
     return rows
         .map(

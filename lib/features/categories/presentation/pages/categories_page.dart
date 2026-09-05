@@ -69,21 +69,22 @@ class CategoriesPage extends GetView<CategoriesController> {
 
                 return switch (state) {
                   IdleState() || LoadingState() => const AppLoader(),
-                  ErrorState(:final message) =>
-                    AppErrorView(message: message, onRetry: controller.load),
+                  ErrorState(:final message) => AppErrorView(
+                    message: message,
+                    onRetry: controller.load,
+                  ),
                   EmptyState() => AppEmptyView(
-                      title: 'No categories',
-                      message:
-                          'Add a ${controller.selectedType.value.label.toLowerCase()} '
-                          'category to start organising your money.',
-                      icon: Icons.label_outline_rounded,
-                      action: FilledButton.icon(
-                        onPressed: () =>
-                            _openForm(controller.selectedType.value),
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('Add category'),
-                      ),
+                    title: 'No categories',
+                    message:
+                        'Add a ${controller.selectedType.value.label.toLowerCase()} '
+                        'category to start organising your money.',
+                    icon: Icons.label_outline_rounded,
+                    action: FilledButton.icon(
+                      onPressed: () => _openForm(controller.selectedType.value),
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Add category'),
                     ),
+                  ),
                   LoadedState() => _CategoryList(controller: controller),
                 };
               }),
@@ -95,7 +96,10 @@ class CategoriesPage extends GetView<CategoriesController> {
   }
 
   Future<void> _openForm(Object argument) async {
-    final saved = await Get.toNamed(AppRoutes.categoryForm, arguments: argument);
+    final saved = await Get.toNamed(
+      AppRoutes.categoryForm,
+      arguments: argument,
+    );
     if (saved == true) await controller.load(showLoader: false);
   }
 }
@@ -149,8 +153,10 @@ class _CategoryTile extends StatelessWidget {
             )
           : null,
       onTap: () async {
-        final saved =
-            await Get.toNamed(AppRoutes.categoryForm, arguments: category);
+        final saved = await Get.toNamed(
+          AppRoutes.categoryForm,
+          arguments: category,
+        );
         if (saved == true) await controller.load(showLoader: false);
       },
       trailing: PopupMenuButton<String>(
@@ -179,7 +185,8 @@ class _CategoryTile extends StatelessWidget {
 
     final confirmed = await ConfirmDialog.show(
       title: 'Delete ${category.name}?',
-      message: 'Categories still used by transactions cannot be deleted — '
+      message:
+          'Categories still used by transactions cannot be deleted — '
           'archive them instead.',
     );
     if (confirmed) await controller.delete(category);

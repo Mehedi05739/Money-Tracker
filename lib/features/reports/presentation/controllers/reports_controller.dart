@@ -14,8 +14,8 @@ class ReportsController extends BaseController {
   final AnalyticsRepository _analytics;
   final AppEvents _events;
 
-  final Rx<DateRange> range =
-      DateRange.fromPreset(DateRangePreset.thisMonth).obs;
+  final Rx<DateRange> range = DateRange.fromPreset(DateRangePreset.thisMonth)
+      .obs;
   final Rx<TransactionType> breakdownType = TransactionType.expense.obs;
 
   final Rxn<PeriodTotals> totals = Rxn<PeriodTotals>();
@@ -34,8 +34,10 @@ class ReportsController extends BaseController {
   double get averageActiveDaySpend {
     final activeDays = trend.where((point) => point.expense > 0).toList();
     if (activeDays.isEmpty) return 0;
-    final total =
-        activeDays.fold<double>(0, (sum, point) => sum + point.expense);
+    final total = activeDays.fold<double>(
+      0,
+      (sum, point) => sum + point.expense,
+    );
     return total / activeDays.length;
   }
 
@@ -52,8 +54,10 @@ class ReportsController extends BaseController {
     load();
 
     // The shell keeps this tab alive, so refresh when data changes elsewhere.
-    _changeWorker =
-        _events.listen(const [DataChange.transactions, DataChange.categories], () => load(showLoader: false));
+    _changeWorker = _events.listen(const [
+      DataChange.transactions,
+      DataChange.categories,
+    ], () => load(showLoader: false));
   }
 
   @override
@@ -83,9 +87,7 @@ class ReportsController extends BaseController {
     totalsResult.fold(
       onSuccess: (data) {
         totals.value = data;
-        data.isEmpty
-            ? setEmpty('No transactions in this period')
-            : setLoaded();
+        data.isEmpty ? setEmpty('No transactions in this period') : setLoaded();
         return null;
       },
       onError: (failure) {

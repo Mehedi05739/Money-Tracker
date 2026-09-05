@@ -50,16 +50,16 @@ class AppTextStyles {
   );
 
   static TextTheme textTheme(Color onSurface) => TextTheme(
-        displaySmall: displayAmount.copyWith(color: onSurface),
-        headlineLarge: headlineLarge.copyWith(color: onSurface),
-        headlineMedium: headlineMedium.copyWith(color: onSurface),
-        headlineSmall: titleLarge.copyWith(color: onSurface),
-        titleLarge: titleLarge.copyWith(color: onSurface),
-        titleMedium: titleMedium.copyWith(color: onSurface),
-        titleSmall: titleMedium.copyWith(fontSize: 13.5, color: onSurface),
-        bodyLarge: bodyLarge.copyWith(color: onSurface),
-        bodyMedium: bodyMedium.copyWith(color: onSurface),
-        bodySmall: bodySmall.copyWith(color: onSurface),
-        labelSmall: caption.copyWith(color: onSurface),
-      );
+    displaySmall: displayAmount.copyWith(color: onSurface),
+    headlineLarge: headlineLarge.copyWith(color: onSurface),
+    headlineMedium: headlineMedium.copyWith(color: onSurface),
+    headlineSmall: titleLarge.copyWith(color: onSurface),
+    titleLarge: titleLarge.copyWith(color: onSurface),
+    titleMedium: titleMedium.copyWith(color: onSurface),
+    titleSmall: titleMedium.copyWith(fontSize: 13.5, color: onSurface),
+    bodyLarge: bodyLarge.copyWith(color: onSurface),
+    bodyMedium: bodyMedium.copyWith(color: onSurface),
+    bodySmall: bodySmall.copyWith(color: onSurface),
+    labelSmall: caption.copyWith(color: onSurface),
+  );
 }

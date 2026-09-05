@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../domain/entities/analytics.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 /// Hero card: total balance across accounts, with income and expense for the
 /// selected period beneath it.
@@ -19,7 +21,7 @@ class BalanceHeader extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: AppRadius.xxlAll,
         gradient: const LinearGradient(
           colors: [AppColors.primary, AppColors.primaryDark],
           begin: Alignment.topLeft,
@@ -33,7 +35,7 @@ class BalanceHeader extends StatelessWidget {
             'Total balance',
             style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
           ),
-          const SizedBox(height: 6),
+          AppSpacing.gapSm,
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -44,7 +46,7 @@ class BalanceHeader extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          AppSpacing.gapLg,
           Row(
             children: [
               Expanded(
@@ -104,15 +106,14 @@ class _Flow extends StatelessWidget {
         Row(
           children: [
             Icon(icon, size: 15, color: Colors.white70),
-            const SizedBox(width: 6),
+            AppSpacing.hGapSm,
             Text(
               label,
-              style:
-                  theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+              style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        AppSpacing.gapXs,
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
@@ -123,10 +124,7 @@ class _Flow extends StatelessWidget {
         ),
         if (changePercent != null) ...[
           const SizedBox(height: 3),
-          _ChangeBadge(
-            percent: changePercent!,
-            higherIsBetter: higherIsBetter,
-          ),
+          _ChangeBadge(percent: changePercent!, higherIsBetter: higherIsBetter),
         ],
       ],
     );

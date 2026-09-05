@@ -10,6 +10,7 @@ import '../../../../core/widgets/category_avatar.dart';
 import '../../../../domain/entities/account.dart';
 import '../../../../domain/entities/category.dart';
 import 'category_grid.dart';
+import '../../../../core/theme/app_radius.dart';
 
 /// Bottom-sheet pickers shared by the transaction, budget and recurring forms.
 class PickerSheets {
@@ -20,26 +21,25 @@ class PickerSheets {
   static Future<Category?> category(
     List<Category> categories, {
     Category? selected,
-  }) =>
-      _show<Category>(
-        title: 'Choose a category',
-        emptyMessage: 'No categories yet. Add one from More → Categories.',
-        itemCount: categories.length,
-        listBuilder: (context) => Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.base,
-            0,
-            AppSpacing.base,
-            AppSpacing.base,
-          ),
-          child: CategoryGrid(
-            categories: categories,
-            selectedId: selected?.id,
-            onSelected: (item) => popRoute<Category>(context, item),
-            physics: const NeverScrollableScrollPhysics(),
-          ),
-        ),
-      );
+  }) => _show<Category>(
+    title: 'Choose a category',
+    emptyMessage: 'No categories yet. Add one from More → Categories.',
+    itemCount: categories.length,
+    listBuilder: (context) => Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.base,
+        0,
+        AppSpacing.base,
+        AppSpacing.base,
+      ),
+      child: CategoryGrid(
+        categories: categories,
+        selectedId: selected?.id,
+        onSelected: (item) => popRoute<Category>(context, item),
+        physics: const NeverScrollableScrollPhysics(),
+      ),
+    ),
+  );
 
   static Future<Account?> account(
     List<Account> accounts, {
@@ -47,8 +47,9 @@ class PickerSheets {
     int? excludeId,
     String title = 'Choose an account',
   }) {
-    final options =
-        accounts.where((account) => account.id != excludeId).toList();
+    final options = accounts
+        .where((account) => account.id != excludeId)
+        .toList();
 
     return _show<Account>(
       title: title,
@@ -97,54 +98,53 @@ class PickerSheets {
     required List<T> values,
     required String Function(T value) labelOf,
     T? selected,
-  }) =>
-      _show<T>(
-        title: title,
-        emptyMessage: '',
-        itemCount: values.length,
-        itemBuilder: (context, index) {
-          final item = values[index];
-          return _Row(
-            title: labelOf(item),
-            isSelected: item == selected,
-            onTap: () => popRoute<T>(context, item),
-          );
-        },
+  }) => _show<T>(
+    title: title,
+    emptyMessage: '',
+    itemCount: values.length,
+    itemBuilder: (context, index) {
+      final item = values[index];
+      return _Row(
+        title: labelOf(item),
+        isSelected: item == selected,
+        onTap: () => popRoute<T>(context, item),
       );
+    },
+  );
 
   static Future<String?> icon({String? selected}) => _show<String>(
-        title: 'Choose an icon',
-        emptyMessage: '',
-        itemCount: 1,
-        listBuilder: (context) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              for (final name in CategoryIcons.pickable)
-                InkWell(
-                  onTap: () => popRoute<String>(context, name),
-                  borderRadius: BorderRadius.circular(24),
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: name == selected
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).dividerColor,
-                        width: name == selected ? 2 : 1,
-                      ),
-                    ),
-                    child: Icon(CategoryIcons.resolve(name), size: 22),
+    title: 'Choose an icon',
+    emptyMessage: '',
+    itemCount: 1,
+    listBuilder: (context) => Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          for (final name in CategoryIcons.pickable)
+            InkWell(
+              onTap: () => popRoute<String>(context, name),
+              borderRadius: AppRadius.xxlAll,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: name == selected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).dividerColor,
+                    width: name == selected ? 2 : 1,
                   ),
                 ),
-            ],
-          ),
-        ),
-      );
+                child: Icon(CategoryIcons.resolve(name), size: 22),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 
   static Future<T?> _show<T>({
     required String title,
@@ -185,7 +185,11 @@ class PickerSheets {
                     ),
                   )
                 else if (listBuilder != null)
-                  Flexible(child: SingleChildScrollView(child: listBuilder(sheetContext)))
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: listBuilder(sheetContext),
+                    ),
+                  )
                 else
                   Flexible(
                     child: ListView.builder(
@@ -204,13 +208,13 @@ class PickerSheets {
   }
 
   static IconData _paymentIcon(PaymentMethod method) => switch (method) {
-        PaymentMethod.cash => Icons.payments_rounded,
-        PaymentMethod.card => Icons.credit_card_rounded,
-        PaymentMethod.bankTransfer => Icons.account_balance_rounded,
-        PaymentMethod.mobileWallet => Icons.smartphone_rounded,
-        PaymentMethod.cheque => Icons.receipt_long_rounded,
-        PaymentMethod.other => Icons.more_horiz_rounded,
-      };
+    PaymentMethod.cash => Icons.payments_rounded,
+    PaymentMethod.card => Icons.credit_card_rounded,
+    PaymentMethod.bankTransfer => Icons.account_balance_rounded,
+    PaymentMethod.mobileWallet => Icons.smartphone_rounded,
+    PaymentMethod.cheque => Icons.receipt_long_rounded,
+    PaymentMethod.other => Icons.more_horiz_rounded,
+  };
 }
 
 class _Row extends StatelessWidget {

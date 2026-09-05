@@ -7,7 +7,8 @@ import 'package:flutter/foundation.dart';
 class AppLogger {
   const AppLogger._();
 
-  static void d(Object? message, {String name = 'DEBUG'}) => _log(message, name);
+  static void d(Object? message, {String name = 'DEBUG'}) =>
+      _log(message, name);
 
   static void i(Object? message, {String name = 'INFO'}) => _log(message, name);
 
@@ -18,8 +19,7 @@ class AppLogger {
     String name = 'ERROR',
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      _log(message, name, error: error, stackTrace: stackTrace);
+  }) => _log(message, name, error: error, stackTrace: stackTrace);
 
   static void _log(
     Object? message,

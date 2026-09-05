@@ -71,17 +71,17 @@ class CategoryGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final horizontal = padding.resolve(TextDirection.ltr).horizontal;
-        final usableWidth = constraints.maxWidth -
-            horizontal -
-            AppSpacing.sm * (columns - 1);
+        final usableWidth =
+            constraints.maxWidth - horizontal - AppSpacing.sm * (columns - 1);
         final tileHeight = (usableWidth / columns) / _aspectRatio;
         final stride = tileHeight + AppSpacing.md;
 
-        final rows = visibleRows ??
+        final rows =
+            visibleRows ??
             (constraints.hasBoundedHeight
                 ? (((constraints.maxHeight + AppSpacing.md) / stride)
-                    .floor()
-                    .clamp(1, 99))
+                      .floor()
+                      .clamp(1, 99))
                 : 2);
 
         return SizedBox(

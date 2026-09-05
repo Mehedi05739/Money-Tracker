@@ -106,14 +106,11 @@ class SpendingPlanRepositoryImpl implements SpendingPlanRepository {
   }
 
   @override
-  Future<Result<SpendingPlanProgress?>> getCurrentProgress() => guard(
-        () async {
-          final plan = await _dao.findCurrent();
-          if (plan == null) return null;
-          return _dao.findProgress(plan);
-        },
-        context: 'currentPlanProgress',
-      );
+  Future<Result<SpendingPlanProgress?>> getCurrentProgress() => guard(() async {
+    final plan = await _dao.findCurrent();
+    if (plan == null) return null;
+    return _dao.findProgress(plan);
+  }, context: 'currentPlanProgress');
 
   Failure? _validatePlan(SpendingPlan plan) {
     final errors = <String, String>{};

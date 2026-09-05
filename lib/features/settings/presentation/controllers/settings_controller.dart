@@ -19,8 +19,7 @@ class SettingsController extends GetxController {
   final AccountRepository _accountRepository;
 
   final Rx<ThemeMode> themeMode = ThemeMode.system.obs;
-  final Rx<SupportedCurrency> currency =
-      SupportedCurrency.all.first.obs;
+  final Rx<SupportedCurrency> currency = SupportedCurrency.all.first.obs;
   final RxnInt defaultAccountId = RxnInt();
   final RxBool isSaving = false.obs;
 
@@ -32,10 +31,12 @@ class SettingsController extends GetxController {
     result.fold(
       onSuccess: (values) {
         themeMode.value = _parseThemeMode(values[SettingKeys.themeMode]);
-        currency.value =
-            SupportedCurrency.byCode(values[SettingKeys.currencyCode]);
-        defaultAccountId.value =
-            int.tryParse(values[SettingKeys.defaultAccountId] ?? '');
+        currency.value = SupportedCurrency.byCode(
+          values[SettingKeys.currencyCode],
+        );
+        defaultAccountId.value = int.tryParse(
+          values[SettingKeys.defaultAccountId] ?? '',
+        );
         Money.configure(currency.value.symbol);
         return null;
       },
@@ -99,8 +100,8 @@ class SettingsController extends GetxController {
   }
 
   static ThemeMode _parseThemeMode(String? value) => switch (value) {
-        'light' => ThemeMode.light,
-        'dark' => ThemeMode.dark,
-        _ => ThemeMode.system,
-      };
+    'light' => ThemeMode.light,
+    'dark' => ThemeMode.dark,
+    _ => ThemeMode.system,
+  };
 }

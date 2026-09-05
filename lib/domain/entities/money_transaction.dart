@@ -32,17 +32,16 @@ class MoneyTransaction {
   factory MoneyTransaction.draft({
     required TransactionType type,
     int accountId = 0,
-  }) =>
-      MoneyTransaction(
-        id: 0,
-        accountId: accountId,
-        type: type,
-        amount: 0,
-        title: '',
-        transactionDate: DateTime.now(),
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+  }) => MoneyTransaction(
+    id: 0,
+    accountId: accountId,
+    type: type,
+    amount: 0,
+    title: '',
+    transactionDate: DateTime.now(),
+    createdAt: DateTime.now(),
+    updatedAt: DateTime.now(),
+  );
 
   final int id;
   final int accountId;
@@ -93,28 +92,27 @@ class MoneyTransaction {
     PaymentMethod? paymentMethod,
     String? note,
     DateTime? updatedAt,
-  }) =>
-      MoneyTransaction(
-        id: id ?? this.id,
-        accountId: accountId ?? this.accountId,
-        toAccountId: clearToAccount ? null : (toAccountId ?? this.toAccountId),
-        type: type ?? this.type,
-        amount: amount ?? this.amount,
-        categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
-        title: title ?? this.title,
-        description: description ?? this.description,
-        transactionDate: transactionDate ?? this.transactionDate,
-        paymentMethod: paymentMethod ?? this.paymentMethod,
-        note: note ?? this.note,
-        recurringId: recurringId,
-        createdAt: createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        categoryName: categoryName,
-        categoryIcon: categoryIcon,
-        categoryColor: categoryColor,
-        accountName: accountName,
-        toAccountName: toAccountName,
-      );
+  }) => MoneyTransaction(
+    id: id ?? this.id,
+    accountId: accountId ?? this.accountId,
+    toAccountId: clearToAccount ? null : (toAccountId ?? this.toAccountId),
+    type: type ?? this.type,
+    amount: amount ?? this.amount,
+    categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
+    title: title ?? this.title,
+    description: description ?? this.description,
+    transactionDate: transactionDate ?? this.transactionDate,
+    paymentMethod: paymentMethod ?? this.paymentMethod,
+    note: note ?? this.note,
+    recurringId: recurringId,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    categoryName: categoryName,
+    categoryIcon: categoryIcon,
+    categoryColor: categoryColor,
+    accountName: accountName,
+    toAccountName: toAccountName,
+  );
 
   @override
   bool operator ==(Object other) => other is MoneyTransaction && other.id == id;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_spacing.dart';
 
 /// Title row above a group of content, with an optional trailing action.

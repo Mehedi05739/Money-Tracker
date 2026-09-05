@@ -16,7 +16,8 @@ class GoalDao {
     final rows = await _db.query(
       Tables.financialGoals,
       where: activeOnly ? "${GoalColumns.status} = 'active'" : null,
-      orderBy: "CASE ${GoalColumns.status} WHEN 'active' THEN 0 "
+      orderBy:
+          "CASE ${GoalColumns.status} WHEN 'active' THEN 0 "
           "WHEN 'achieved' THEN 1 ELSE 2 END, "
           '${GoalColumns.targetDate} IS NULL, ${GoalColumns.targetDate} ASC',
     );
@@ -51,10 +52,10 @@ class GoalDao {
   }
 
   Future<int> delete(int id) => _db.delete(
-        Tables.financialGoals,
-        where: '${GoalColumns.id} = ?',
-        whereArgs: [id],
-      );
+    Tables.financialGoals,
+    where: '${GoalColumns.id} = ?',
+    whereArgs: [id],
+  );
 
   Future<List<GoalContribution>> findContributions(int goalId) async {
     final rows = await _db.rawQuery(

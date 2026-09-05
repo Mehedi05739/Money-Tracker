@@ -25,9 +25,7 @@ class SpendingPlanProgress {
     required this.totalSpent,
   });
 
-  SpendingPlanProgress.empty(this.plan)
-      : items = const [],
-        totalSpent = 0;
+  SpendingPlanProgress.empty(this.plan) : items = const [], totalSpent = 0;
 
   final SpendingPlan plan;
   final List<SpendingPlanItemProgress> items;
@@ -37,8 +35,7 @@ class SpendingPlanProgress {
 
   double get totalLimit => plan.totalLimit;
 
-  double get totalPlanned =>
-      items.fold(0, (sum, item) => sum + item.planned);
+  double get totalPlanned => items.fold(0, (sum, item) => sum + item.planned);
 
   /// Limit not yet assigned to any category.
   double get unallocated => totalLimit - totalPlanned;

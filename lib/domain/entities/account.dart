@@ -18,15 +18,15 @@ class Account {
 
   /// Draft used by the create form, before the database assigns an id.
   factory Account.draft() => Account(
-        id: 0,
-        name: '',
-        type: AccountType.cash,
-        openingBalance: 0,
-        currentBalance: 0,
-        currency: 'USD',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+    id: 0,
+    name: '',
+    type: AccountType.cash,
+    openingBalance: 0,
+    currentBalance: 0,
+    currency: 'USD',
+    createdAt: DateTime.now(),
+    updatedAt: DateTime.now(),
+  );
 
   final int id;
   final String name;
@@ -58,21 +58,20 @@ class Account {
     bool? isArchived,
     int? sortOrder,
     DateTime? updatedAt,
-  }) =>
-      Account(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        type: type ?? this.type,
-        openingBalance: openingBalance ?? this.openingBalance,
-        currentBalance: currentBalance ?? this.currentBalance,
-        currency: currency ?? this.currency,
-        icon: icon ?? this.icon,
-        color: color ?? this.color,
-        isArchived: isArchived ?? this.isArchived,
-        sortOrder: sortOrder ?? this.sortOrder,
-        createdAt: createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-      );
+  }) => Account(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    type: type ?? this.type,
+    openingBalance: openingBalance ?? this.openingBalance,
+    currentBalance: currentBalance ?? this.currentBalance,
+    currency: currency ?? this.currency,
+    icon: icon ?? this.icon,
+    color: color ?? this.color,
+    isArchived: isArchived ?? this.isArchived,
+    sortOrder: sortOrder ?? this.sortOrder,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
 
   @override
   bool operator ==(Object other) => other is Account && other.id == id;

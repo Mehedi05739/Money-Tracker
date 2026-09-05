@@ -112,10 +112,7 @@ class DependencyInjection {
   static Future<void> _registerServices() async {
     Get.put(AppEvents(), permanent: true);
 
-    Get.put(
-      RecurringService(Get.find<RecurringRepository>()),
-      permanent: true,
-    );
+    Get.put(RecurringService(Get.find<RecurringRepository>()), permanent: true);
 
     // Loaded before the first frame so the theme and currency symbol are
     // correct on the very first paint.

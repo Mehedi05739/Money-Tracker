@@ -17,7 +17,8 @@ class RecurringDao {
   /// years) writing an unbounded number of rows in one pass.
   static const int maxOccurrencesPerRun = 120;
 
-  static const String _selectWithJoins = '''
+  static const String _selectWithJoins =
+      '''
     SELECT r.*,
            c.${CategoryColumns.name}  AS ${RecurringMapper.aliasCategoryName},
            c.${CategoryColumns.icon}  AS ${RecurringMapper.aliasCategoryIcon},
@@ -65,9 +66,8 @@ class RecurringDao {
       _db.insert(Tables.recurringTransactions, RecurringMapper.toRow(rule));
 
   Future<int> update(RecurringTransaction rule) {
-    final row = RecurringMapper.toRow(
-      rule.copyWith(updatedAt: DateTime.now()),
-    )..remove(RecurringColumns.createdAt);
+    final row = RecurringMapper.toRow(rule.copyWith(updatedAt: DateTime.now()))
+      ..remove(RecurringColumns.createdAt);
     return _db.update(
       Tables.recurringTransactions,
       row,
@@ -77,20 +77,20 @@ class RecurringDao {
   }
 
   Future<int> delete(int id) => _db.delete(
-        Tables.recurringTransactions,
-        where: '${RecurringColumns.id} = ?',
-        whereArgs: [id],
-      );
+    Tables.recurringTransactions,
+    where: '${RecurringColumns.id} = ?',
+    whereArgs: [id],
+  );
 
   Future<int> setActive(int id, bool active) => _db.update(
-        Tables.recurringTransactions,
-        {
-          RecurringColumns.isActive: asDbBool(active),
-          RecurringColumns.updatedAt: AppDate.toDb(DateTime.now()),
-        },
-        where: '${RecurringColumns.id} = ?',
-        whereArgs: [id],
-      );
+    Tables.recurringTransactions,
+    {
+      RecurringColumns.isActive: asDbBool(active),
+      RecurringColumns.updatedAt: AppDate.toDb(DateTime.now()),
+    },
+    where: '${RecurringColumns.id} = ?',
+    whereArgs: [id],
+  );
 
   /// Writes every occurrence from `next_run_date` up to today and advances the
   /// schedule past them.
@@ -106,7 +106,8 @@ class RecurringDao {
       DateTime? lastPosted;
 
       while (!cursor.isAfter(cutoff) && posted < maxOccurrencesPerRun) {
-        if (rule.endDate != null && cursor.isAfter(AppDate.endOfDay(rule.endDate!))) {
+        if (rule.endDate != null &&
+            cursor.isAfter(AppDate.endOfDay(rule.endDate!))) {
           break;
         }
 
@@ -136,7 +137,8 @@ class RecurringDao {
 
       if (posted == 0) return 0;
 
-      final ended = rule.endDate != null &&
+      final ended =
+          rule.endDate != null &&
           cursor.isAfter(AppDate.endOfDay(rule.endDate!));
 
       await txn.update(

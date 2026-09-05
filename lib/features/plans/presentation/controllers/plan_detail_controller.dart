@@ -27,7 +27,8 @@ class PlanDetailController extends BaseController {
 
   /// Categories not yet allocated in this plan — one line per category.
   List<Category> get unallocatedCategories {
-    final used = progress.value?.items
+    final used =
+        progress.value?.items
             .map((item) => item.item.categoryId)
             .whereType<int>()
             .toSet() ??
@@ -46,8 +47,9 @@ class PlanDetailController extends BaseController {
     if (showLoader) setLoading();
 
     final progressFuture = _repository.getProgress(planId);
-    final categoryFuture =
-        _categories.getCategories(type: TransactionType.expense);
+    final categoryFuture = _categories.getCategories(
+      type: TransactionType.expense,
+    );
 
     final progressResult = await progressFuture;
     categories.assignAll((await categoryFuture).dataOrNull ?? const []);

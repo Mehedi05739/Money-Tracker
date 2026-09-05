@@ -6,6 +6,7 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/amount_text.dart';
 import '../../../../core/widgets/category_avatar.dart';
 import '../../../../domain/entities/money_transaction.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 /// One ledger row. Used by the dashboard's recent list and the full ledger.
 class TransactionTile extends StatelessWidget {
@@ -29,10 +30,7 @@ class TransactionTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: dense ? 8 : 11,
-        ),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: dense ? 8 : 11),
         child: Row(
           children: [
             CategoryAvatar(
@@ -44,7 +42,7 @@ class TransactionTile extends StatelessWidget {
                   ? Icons.swap_horiz_rounded
                   : null,
             ),
-            const SizedBox(width: 12),
+            AppSpacing.hGapMd,
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,7 +58,7 @@ class TransactionTile extends StatelessWidget {
                         ),
                       ),
                       if (transaction.isRecurringInstance) ...[
-                        const SizedBox(width: 6),
+                        AppSpacing.hGapSm,
                         Icon(
                           Icons.autorenew_rounded,
                           size: 13,
@@ -69,7 +67,7 @@ class TransactionTile extends StatelessWidget {
                       ],
                     ],
                   ),
-                  const SizedBox(height: 2),
+                  AppSpacing.gapXxs,
                   Text(
                     _subtitle,
                     maxLines: 1,
@@ -81,7 +79,7 @@ class TransactionTile extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 10),
+            AppSpacing.hGapSm,
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -91,7 +89,7 @@ class TransactionTile extends StatelessWidget {
                   style: theme.textTheme.titleSmall,
                 ),
                 if (showDate) ...[
-                  const SizedBox(height: 2),
+                  AppSpacing.gapXxs,
                   Text(
                     AppDate.formatTime(transaction.transactionDate),
                     style: theme.textTheme.bodySmall?.copyWith(

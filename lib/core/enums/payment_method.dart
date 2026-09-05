@@ -15,11 +15,11 @@ enum PaymentMethod {
   }
 
   String get label => switch (this) {
-        PaymentMethod.cash => 'Cash',
-        PaymentMethod.card => 'Card',
-        PaymentMethod.bankTransfer => 'Bank transfer',
-        PaymentMethod.mobileWallet => 'Mobile wallet',
-        PaymentMethod.cheque => 'Cheque',
-        PaymentMethod.other => 'Other',
-      };
+    PaymentMethod.cash => 'Cash',
+    PaymentMethod.card => 'Card',
+    PaymentMethod.bankTransfer => 'Bank transfer',
+    PaymentMethod.mobileWallet => 'Mobile wallet',
+    PaymentMethod.cheque => 'Cheque',
+    PaymentMethod.other => 'Other',
+  };
 }

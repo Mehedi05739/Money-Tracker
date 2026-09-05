@@ -25,20 +25,16 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     DateRange range, {
     TransactionType type = TransactionType.expense,
     int limit = 20,
-  }) =>
-      guard(
-        () => _dao.categoryBreakdown(range, type: type, limit: limit),
-        context: 'categoryBreakdown',
-      );
+  }) => guard(
+    () => _dao.categoryBreakdown(range, type: type, limit: limit),
+    context: 'categoryBreakdown',
+  );
 
   @override
   Future<Result<List<TrendPoint>>> getDailyTrend(DateRange range) => guard(
-        () async => AnalyticsDao.fillDailyGaps(
-          await _dao.dailyTrend(range),
-          range,
-        ),
-        context: 'dailyTrend',
-      );
+    () async => AnalyticsDao.fillDailyGaps(await _dao.dailyTrend(range), range),
+    context: 'dailyTrend',
+  );
 
   @override
   Future<Result<List<TrendPoint>>> getMonthlyTrend(DateRange range) =>

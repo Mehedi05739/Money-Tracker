@@ -17,14 +17,14 @@ class FinancialGoal {
   });
 
   factory FinancialGoal.draft() => FinancialGoal(
-        id: 0,
-        name: '',
-        targetAmount: 0,
-        currentAmount: 0,
-        targetDate: DateTime.now().add(const Duration(days: 180)),
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+    id: 0,
+    name: '',
+    targetAmount: 0,
+    currentAmount: 0,
+    targetDate: DateTime.now().add(const Duration(days: 180)),
+    createdAt: DateTime.now(),
+    updatedAt: DateTime.now(),
+  );
 
   final int id;
   final String name;
@@ -79,20 +79,19 @@ class FinancialGoal {
     GoalStatus? status,
     String? note,
     DateTime? updatedAt,
-  }) =>
-      FinancialGoal(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        targetAmount: targetAmount ?? this.targetAmount,
-        currentAmount: currentAmount ?? this.currentAmount,
-        targetDate: clearTargetDate ? null : (targetDate ?? this.targetDate),
-        icon: icon ?? this.icon,
-        color: color ?? this.color,
-        status: status ?? this.status,
-        note: note ?? this.note,
-        createdAt: createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-      );
+  }) => FinancialGoal(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    targetAmount: targetAmount ?? this.targetAmount,
+    currentAmount: currentAmount ?? this.currentAmount,
+    targetDate: clearTargetDate ? null : (targetDate ?? this.targetDate),
+    icon: icon ?? this.icon,
+    color: color ?? this.color,
+    status: status ?? this.status,
+    note: note ?? this.note,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
 
   @override
   bool operator ==(Object other) => other is FinancialGoal && other.id == id;

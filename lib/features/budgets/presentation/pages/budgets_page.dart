@@ -15,6 +15,8 @@ import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../domain/entities/budget_status.dart';
 import '../../../../routes/app_routes.dart';
 import '../controllers/budgets_controller.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class BudgetsPage extends GetView<BudgetsController> {
   const BudgetsPage({super.key});
@@ -45,19 +47,22 @@ class BudgetsPage extends GetView<BudgetsController> {
 
           return switch (state) {
             IdleState() || LoadingState() => const AppLoader(),
-            ErrorState(:final message) =>
-              AppErrorView(message: message, onRetry: controller.load),
+            ErrorState(:final message) => AppErrorView(
+              message: message,
+              onRetry: controller.load,
+            ),
             EmptyState(:final message) => AppEmptyView(
-                title: 'No budgets',
-                message: '$message. Set a limit for a category and track it '
-                    'as you spend.',
-                icon: Icons.pie_chart_outline_rounded,
-                action: FilledButton.icon(
-                  onPressed: () => _openForm(),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Create budget'),
-                ),
+              title: 'No budgets',
+              message:
+                  '$message. Set a limit for a category and track it '
+                  'as you spend.',
+              icon: Icons.pie_chart_outline_rounded,
+              action: FilledButton.icon(
+                onPressed: () => _openForm(),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Create budget'),
               ),
+            ),
             LoadedState() => _BudgetList(controller: controller),
           };
         }),
@@ -106,7 +111,7 @@ class _BudgetList extends StatelessWidget {
                       ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                AppSpacing.gapMd,
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -114,7 +119,7 @@ class _BudgetList extends StatelessWidget {
                       Money.format(spent),
                       style: theme.textTheme.headlineMedium,
                     ),
-                    const SizedBox(width: 6),
+                    AppSpacing.hGapSm,
                     Padding(
                       padding: const EdgeInsets.only(bottom: 3),
                       child: Text(
@@ -126,7 +131,7 @@ class _BudgetList extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                AppSpacing.gapMd,
                 AppProgressBar(
                   value: budgeted <= 0 ? 0 : spent / budgeted,
                   exceeded: spent > budgeted,
@@ -135,13 +140,13 @@ class _BudgetList extends StatelessWidget {
             ),
           );
         }),
-        const SizedBox(height: 16),
+        AppSpacing.gapBase,
         Obx(
           () => Column(
             children: [
               for (final status in controller.statuses) ...[
                 _BudgetCard(status: status, controller: controller),
-                const SizedBox(height: 12),
+                AppSpacing.gapMd,
               ],
             ],
           ),
@@ -164,13 +169,15 @@ class _BudgetCard extends StatelessWidget {
     final statusColor = status.isExceeded
         ? context.expenseColor
         : status.isAtRisk || status.isOverPace
-            ? context.warningColor
-            : theme.colorScheme.primary;
+        ? context.warningColor
+        : theme.colorScheme.primary;
 
     return AppCard(
       onTap: () async {
-        final saved =
-            await Get.toNamed(AppRoutes.budgetForm, arguments: budget);
+        final saved = await Get.toNamed(
+          AppRoutes.budgetForm,
+          arguments: budget,
+        );
         if (saved == true) await controller.load(showLoader: false);
       },
       child: Column(
@@ -183,9 +190,11 @@ class _BudgetCard extends StatelessWidget {
                 color: budget.categoryColor,
                 seed: budget.categoryId ?? 0,
                 size: 38,
-                overrideIcon: budget.isOverall ? Icons.all_inclusive_rounded : null,
+                overrideIcon: budget.isOverall
+                    ? Icons.all_inclusive_rounded
+                    : null,
               ),
-              const SizedBox(width: 12),
+              AppSpacing.hGapMd,
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +205,7 @@ class _BudgetCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall,
                     ),
-                    const SizedBox(height: 2),
+                    AppSpacing.gapXxs,
                     Text(
                       '${budget.period.label} · '
                       '${AppDate.formatDate(budget.startDate)} – '
@@ -223,14 +232,14 @@ class _BudgetCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          AppSpacing.gapMd,
           Row(
             children: [
               Text(
                 Money.format(status.spent),
                 style: theme.textTheme.titleLarge?.copyWith(color: statusColor),
               ),
-              const SizedBox(width: 6),
+              AppSpacing.hGapSm,
               Text(
                 'of ${Money.format(status.limit)}',
                 style: theme.textTheme.bodySmall?.copyWith(
@@ -242,27 +251,29 @@ class _BudgetCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.13),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: AppRadius.xsAll,
                 ),
                 child: Text(
                   status.headline,
-                  style: theme.textTheme.labelSmall?.copyWith(color: statusColor),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: statusColor,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          AppSpacing.gapSm,
           AppProgressBar(
             value: status.usageFraction,
             exceeded: status.isExceeded,
             warningThreshold: budget.alertPercentage / 100,
           ),
-          const SizedBox(height: 8),
+          AppSpacing.gapSm,
           Text(
             status.isExceeded
                 ? '${Money.format(status.spent - status.limit)} over the limit'
                 : '${Money.format(status.remaining)} left · '
-                    '${Money.format(status.safeDailyAllowance)} a day to stay on track',
+                      '${Money.format(status.safeDailyAllowance)} a day to stay on track',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

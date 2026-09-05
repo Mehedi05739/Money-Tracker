@@ -48,7 +48,7 @@ class SupportedCurrency {
   ];
 
   static SupportedCurrency byCode(String? code) => all.firstWhere(
-        (currency) => currency.code == code,
-        orElse: () => all.first,
-      );
+    (currency) => currency.code == code,
+    orElse: () => all.first,
+  );
 }

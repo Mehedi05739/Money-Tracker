@@ -50,8 +50,8 @@ class TransactionsController extends BaseController {
   final RxList<MoneyTransaction> transactions = <MoneyTransaction>[].obs;
   final RxList<TransactionDayGroup> groups = <TransactionDayGroup>[].obs;
   final Rx<TransactionFilter> filter = const TransactionFilter().obs;
-  final Rx<DateRange> range =
-      DateRange.fromPreset(DateRangePreset.thisMonth).obs;
+  final Rx<DateRange> range = DateRange.fromPreset(DateRangePreset.thisMonth)
+      .obs;
 
   final RxBool isLoadingMore = false.obs;
   final RxBool hasMore = true.obs;
@@ -77,7 +77,11 @@ class TransactionsController extends BaseController {
     load();
 
     _changeWorker = _events.listen(
-      const [DataChange.transactions, DataChange.accounts, DataChange.categories],
+      const [
+        DataChange.transactions,
+        DataChange.accounts,
+        DataChange.categories,
+      ],
       () {
         _loadReferenceData();
         load(showLoader: false);

@@ -11,6 +11,7 @@ import '../../../../domain/entities/money_transaction.dart';
 import '../../../../routes/app_routes.dart';
 import '../controllers/transaction_form_controller.dart';
 import '../widgets/picker_sheets.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 /// Add / edit transaction.
 ///
@@ -20,10 +21,7 @@ class TransactionFormPage extends GetView<TransactionFormController> {
 
   /// Opens a blank form for [type]. Returns true when something was saved.
   static Future<bool> open(TransactionType type) async {
-    final saved = await Get.toNamed(
-      AppRoutes.transactionForm,
-      arguments: type,
-    );
+    final saved = await Get.toNamed(AppRoutes.transactionForm, arguments: type);
     return saved == true;
   }
 
@@ -86,7 +84,7 @@ class _FormBody extends StatelessWidget {
                   onChanged: controller.changeType,
                 ),
               ),
-              const SizedBox(height: 20),
+              AppSpacing.gapLg,
               Obx(
                 () => AmountField(
                   controller: controller.amountField,
@@ -94,7 +92,7 @@ class _FormBody extends StatelessWidget {
                   errorText: controller.fieldErrors['amount'],
                 ),
               ),
-              const SizedBox(height: 16),
+              AppSpacing.gapBase,
               Obx(() {
                 if (controller.type.value.isTransfer) {
                   return const SizedBox.shrink();
@@ -126,7 +124,9 @@ class _FormBody extends StatelessWidget {
               }),
               Obx(
                 () => AppPickerField(
-                  label: controller.type.value.isTransfer ? 'From account' : 'Account',
+                  label: controller.type.value.isTransfer
+                      ? 'From account'
+                      : 'Account',
                   value: controller.account.value?.name,
                   errorText: controller.fieldErrors['account'],
                   onTap: () async {
@@ -160,7 +160,7 @@ class _FormBody extends StatelessWidget {
                   ),
                 );
               }),
-              const SizedBox(height: 16),
+              AppSpacing.gapBase,
               Obx(
                 () => AppPickerField(
                   label: 'Date',
@@ -169,14 +169,14 @@ class _FormBody extends StatelessWidget {
                   onTap: () => _pickDate(context),
                 ),
               ),
-              const SizedBox(height: 16),
+              AppSpacing.gapBase,
               AppTextField(
                 controller: controller.titleField,
                 label: 'Title',
                 hint: 'Optional — defaults to the category',
                 maxLength: 60,
               ),
-              const SizedBox(height: 16),
+              AppSpacing.gapBase,
               Obx(
                 () => AppPickerField(
                   label: 'Payment method',
@@ -190,7 +190,7 @@ class _FormBody extends StatelessWidget {
                   },
                 ),
               ),
-              const SizedBox(height: 16),
+              AppSpacing.gapBase,
               AppTextField(
                 controller: controller.noteField,
                 label: 'Note',

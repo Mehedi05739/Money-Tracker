@@ -11,9 +11,9 @@ class PeriodTotals {
   });
 
   const PeriodTotals.empty(this.range)
-      : income = 0,
-        expense = 0,
-        transactionCount = 0;
+    : income = 0,
+      expense = 0,
+      transactionCount = 0;
 
   final double income;
   final double expense;
@@ -57,14 +57,14 @@ class CategorySpending {
   final double share;
 
   CategorySpending withShare(double total) => CategorySpending(
-        categoryId: categoryId,
-        categoryName: categoryName,
-        categoryIcon: categoryIcon,
-        categoryColor: categoryColor,
-        amount: amount,
-        transactionCount: transactionCount,
-        share: total <= 0 ? 0 : (amount / total) * 100,
-      );
+    categoryId: categoryId,
+    categoryName: categoryName,
+    categoryIcon: categoryIcon,
+    categoryColor: categoryColor,
+    amount: amount,
+    transactionCount: transactionCount,
+    share: total <= 0 ? 0 : (amount / total) * 100,
+  );
 }
 
 /// A point on the daily/monthly trend chart.
@@ -98,13 +98,13 @@ class DashboardSummary {
   });
 
   DashboardSummary.empty(this.range)
-      : totals = PeriodTotals.empty(range),
-        previousTotals = PeriodTotals.empty(range),
-        totalBalance = 0,
-        todaySpend = 0,
-        monthSpend = 0,
-        topCategories = const [],
-        trend = const [];
+    : totals = PeriodTotals.empty(range),
+      previousTotals = PeriodTotals.empty(range),
+      totalBalance = 0,
+      todaySpend = 0,
+      monthSpend = 0,
+      topCategories = const [],
+      trend = const [];
 
   final DateRange range;
   final PeriodTotals totals;

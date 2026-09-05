@@ -7,6 +7,7 @@ import '../../../../core/theme/category_icons.dart';
 import '../../../../core/widgets/form_fields.dart';
 import '../../../transactions/presentation/widgets/picker_sheets.dart';
 import '../controllers/category_form_controller.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class CategoryFormPage extends GetView<CategoryFormController> {
   const CategoryFormPage({super.key});
@@ -40,7 +41,7 @@ class CategoryFormPage extends GetView<CategoryFormController> {
                       onChanged: controller.changeType,
                     ),
                   ),
-                if (controller.canChangeType) const SizedBox(height: 20),
+                if (controller.canChangeType) AppSpacing.gapLg,
                 Obx(
                   () => AppTextField(
                     controller: controller.nameField,
@@ -50,9 +51,9 @@ class CategoryFormPage extends GetView<CategoryFormController> {
                     errorText: controller.fieldErrors['name'],
                   ),
                 ),
-                const SizedBox(height: 20),
+                AppSpacing.gapLg,
                 Text('Appearance', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 12),
+                AppSpacing.gapMd,
                 Obx(
                   () => AppPickerField(
                     label: 'Icon',
@@ -69,14 +70,14 @@ class CategoryFormPage extends GetView<CategoryFormController> {
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppSpacing.gapBase,
                 Text(
                   'Colour',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 10),
+                AppSpacing.gapSm,
                 Obx(
                   () => Wrap(
                     spacing: 10,
@@ -92,7 +93,8 @@ class CategoryFormPage extends GetView<CategoryFormController> {
                               color: color,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: controller.color.value == color.toARGB32()
+                                color:
+                                    controller.color.value == color.toARGB32()
                                     ? theme.colorScheme.onSurface
                                     : Colors.transparent,
                                 width: 2.5,
@@ -135,8 +137,9 @@ class CategoryFormPage extends GetView<CategoryFormController> {
                 child: controller.isSubmitting.value
                     ? const SizedBox.square(
                         dimension: 20,
-                        child:
-                            CircularProgressIndicator.adaptive(strokeWidth: 2),
+                        child: CircularProgressIndicator.adaptive(
+                          strokeWidth: 2,
+                        ),
                       )
                     : Text(
                         controller.isEditing ? 'Save changes' : 'Add category',

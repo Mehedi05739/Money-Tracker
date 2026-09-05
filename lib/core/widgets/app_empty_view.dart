@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_spacing.dart';
 
 class AppEmptyView extends StatelessWidget {
@@ -28,8 +29,9 @@ class AppEmptyView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.6),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.6,
+                ),
                 shape: BoxShape.circle,
               ),
               child: Icon(

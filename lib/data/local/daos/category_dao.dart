@@ -60,17 +60,17 @@ class CategoryDao {
   }
 
   Future<int> delete(int id) => _db.delete(
-        Tables.categories,
-        where: '${CategoryColumns.id} = ?',
-        whereArgs: [id],
-      );
+    Tables.categories,
+    where: '${CategoryColumns.id} = ?',
+    whereArgs: [id],
+  );
 
   Future<int> setArchived(int id, bool archived) => _db.update(
-        Tables.categories,
-        {CategoryColumns.isArchived: asDbBool(archived)},
-        where: '${CategoryColumns.id} = ?',
-        whereArgs: [id],
-      );
+    Tables.categories,
+    {CategoryColumns.isArchived: asDbBool(archived)},
+    where: '${CategoryColumns.id} = ?',
+    whereArgs: [id],
+  );
 
   /// Used to decide whether deleting is safe or the user should archive.
   Future<int> countTransactions(int categoryId) async {
@@ -82,18 +82,18 @@ class CategoryDao {
     return rows.first.readIntOrNull('c') ?? 0;
   }
 
-  Future<bool> existsWithName(String name, TransactionType type,
-      {int? excludingId}) async {
+  Future<bool> existsWithName(
+    String name,
+    TransactionType type, {
+    int? excludingId,
+  }) async {
     final rows = await _db.query(
       Tables.categories,
       columns: [CategoryColumns.id],
-      where: 'LOWER(${CategoryColumns.name}) = ? AND ${CategoryColumns.type} = ?'
+      where:
+          'LOWER(${CategoryColumns.name}) = ? AND ${CategoryColumns.type} = ?'
           '${excludingId != null ? ' AND ${CategoryColumns.id} <> ?' : ''}',
-      whereArgs: [
-        name.trim().toLowerCase(),
-        type.name,
-        ?excludingId,
-      ],
+      whereArgs: [name.trim().toLowerCase(), type.name, ?excludingId],
       limit: 1,
     );
     return rows.isNotEmpty;

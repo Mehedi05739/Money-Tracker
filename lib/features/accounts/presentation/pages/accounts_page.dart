@@ -13,6 +13,7 @@ import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../domain/entities/account.dart';
 import '../../../../routes/app_routes.dart';
 import '../controllers/accounts_controller.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class AccountsPage extends GetView<AccountsController> {
   const AccountsPage({super.key});
@@ -50,18 +51,20 @@ class AccountsPage extends GetView<AccountsController> {
 
           return switch (state) {
             IdleState() || LoadingState() => const AppLoader(),
-            ErrorState(:final message) =>
-              AppErrorView(message: message, onRetry: controller.load),
+            ErrorState(:final message) => AppErrorView(
+              message: message,
+              onRetry: controller.load,
+            ),
             EmptyState(:final message) => AppEmptyView(
-                title: 'No accounts',
-                message: message,
-                icon: Icons.account_balance_wallet_outlined,
-                action: FilledButton.icon(
-                  onPressed: () => _openForm(),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Add account'),
-                ),
+              title: 'No accounts',
+              message: message,
+              icon: Icons.account_balance_wallet_outlined,
+              action: FilledButton.icon(
+                onPressed: () => _openForm(),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Add account'),
               ),
+            ),
             LoadedState() => _AccountsList(controller: controller),
           };
         }),
@@ -102,7 +105,7 @@ class _AccountsList extends StatelessWidget {
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      AppSpacing.gapXs,
                       AmountText.signed(
                         amount: controller.totalBalance.value,
                         style: theme.textTheme.headlineMedium,
@@ -119,13 +122,13 @@ class _AccountsList extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        AppSpacing.gapBase,
         Obx(
           () => Column(
             children: [
               for (final account in controller.accounts) ...[
                 _AccountTile(account: account, controller: controller),
-                const SizedBox(height: 10),
+                AppSpacing.gapSm,
               ],
             ],
           ),
@@ -148,8 +151,10 @@ class _AccountTile extends StatelessWidget {
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       onTap: () async {
-        final saved =
-            await Get.toNamed(AppRoutes.accountForm, arguments: account);
+        final saved = await Get.toNamed(
+          AppRoutes.accountForm,
+          arguments: account,
+        );
         if (saved == true) await controller.load(showLoader: false);
       },
       child: Row(
@@ -159,7 +164,7 @@ class _AccountTile extends StatelessWidget {
             color: account.color,
             seed: account.id,
           ),
-          const SizedBox(width: 12),
+          AppSpacing.hGapMd,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,7 +180,7 @@ class _AccountTile extends StatelessWidget {
                       ),
                     ),
                     if (account.isArchived) ...[
-                      const SizedBox(width: 6),
+                      AppSpacing.hGapSm,
                       Icon(
                         Icons.archive_outlined,
                         size: 13,
@@ -184,7 +189,7 @@ class _AccountTile extends StatelessWidget {
                     ],
                   ],
                 ),
-                const SizedBox(height: 2),
+                AppSpacing.gapXxs,
                 Text(
                   account.type.label,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -201,7 +206,7 @@ class _AccountTile extends StatelessWidget {
                 amount: account.currentBalance,
                 style: theme.textTheme.titleSmall,
               ),
-              const SizedBox(height: 2),
+              AppSpacing.gapXxs,
               Text(
                 'Opened ${Money.compact(account.openingBalance)}',
                 style: theme.textTheme.bodySmall?.copyWith(
@@ -239,7 +244,8 @@ class _AccountTile extends StatelessWidget {
 
     final confirmed = await ConfirmDialog.show(
       title: 'Delete ${account.name}?',
-      message: 'Every transaction in this account will be deleted too. '
+      message:
+          'Every transaction in this account will be deleted too. '
           'Archive it instead if you want to keep your history.',
     );
     if (confirmed) await controller.delete(account);

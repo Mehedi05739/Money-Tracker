@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/base/view_state.dart';
 import '../../../../core/enums/transaction_type.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -42,19 +44,23 @@ class ReportsPage extends GetView<ReportsController> {
           ),
         ),
       ),
-      body: RefreshIndicator.adaptive(
-        onRefresh: controller.refreshData,
-        child: Obx(() {
-          final state = controller.state;
+      body: ContentWidth(
+        child: RefreshIndicator.adaptive(
+          onRefresh: controller.refreshData,
+          child: Obx(() {
+            final state = controller.state;
 
-          return switch (state) {
-            IdleState() || LoadingState() => const AppLoader(),
-            ErrorState(:final message) =>
-              AppErrorView(message: message, onRetry: controller.load),
-            EmptyState(:final message) => _EmptyReport(message: message),
-            LoadedState() => _ReportBody(controller: controller),
-          };
-        }),
+            return switch (state) {
+              IdleState() || LoadingState() => const AppLoader(),
+              ErrorState(:final message) => AppErrorView(
+                message: message,
+                onRetry: controller.load,
+              ),
+              EmptyState(:final message) => _EmptyReport(message: message),
+              LoadedState() => _ReportBody(controller: controller),
+            };
+          }),
+        ),
       ),
     );
   }
@@ -72,7 +78,7 @@ class _ReportBody extends StatelessWidget {
       if (totals == null) return const AppLoader();
 
       return ListView(
-        padding: const EdgeInsets.only(bottom: 96),
+        padding: const EdgeInsets.only(bottom: AppSpacing.fabClearance),
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           Padding(
@@ -85,9 +91,7 @@ class _ReportBody extends StatelessWidget {
           const SectionHeader(title: 'Key numbers'),
           _MetricGrid(controller: controller, totals: totals),
           SectionHeader(
-            title: controller.isMonthlyTrend
-                ? 'Monthly trend'
-                : 'Daily trend',
+            title: controller.isMonthlyTrend ? 'Monthly trend' : 'Daily trend',
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -118,7 +122,7 @@ class _ReportBody extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          AppSpacing.gapMd,
           Obx(() {
             final breakdown = controller.breakdown;
             if (breakdown.isEmpty) {
@@ -129,8 +133,8 @@ class _ReportBody extends StatelessWidget {
                     'No ${controller.breakdownType.value.label.toLowerCase()} '
                     'recorded in this period.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               );
@@ -174,7 +178,7 @@ class _SummaryCard extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 4),
+          AppSpacing.gapXs,
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -185,7 +189,7 @@ class _SummaryCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          AppSpacing.gapSm,
           Text(
             '${totals.savingsRate.toStringAsFixed(0)}% of income kept · '
             '${totals.transactionCount} transactions',
@@ -200,7 +204,7 @@ class _SummaryCard extends StatelessWidget {
             color: context.incomeColor,
             total: totals.income + totals.expense,
           ),
-          const SizedBox(height: 12),
+          AppSpacing.gapMd,
           _FlowRow(
             label: 'Expense',
             amount: totals.expense,
@@ -242,7 +246,7 @@ class _FlowRow extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        AppSpacing.gapSm,
         AppProgressBar(
           value: total <= 0 ? 0 : amount / total,
           color: color,
@@ -278,7 +282,7 @@ class _MetricGrid extends StatelessWidget {
                   footnote: '${totals.range.elapsedDays} days elapsed',
                 ),
               ),
-              const SizedBox(width: 12),
+              AppSpacing.hGapMd,
               Expanded(
                 child: StatTile(
                   label: 'Avg spending day',
@@ -288,7 +292,7 @@ class _MetricGrid extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          AppSpacing.gapMd,
           Row(
             children: [
               Expanded(
@@ -299,10 +303,10 @@ class _MetricGrid extends StatelessWidget {
                   footnote: controller.topCategory == null
                       ? null
                       : '${Money.compact(controller.topCategory!.amount)} · '
-                          '${controller.topCategory!.share.toStringAsFixed(0)}%',
+                            '${controller.topCategory!.share.toStringAsFixed(0)}%',
                 ),
               ),
-              const SizedBox(width: 12),
+              AppSpacing.hGapMd,
               Expanded(
                 child: StatTile(
                   label: 'Highest period',
@@ -311,8 +315,8 @@ class _MetricGrid extends StatelessWidget {
                   footnote: peak == null
                       ? null
                       : controller.isMonthlyTrend
-                          ? AppDate.formatMonth(peak.date)
-                          : AppDate.formatDate(peak.date),
+                      ? AppDate.formatMonth(peak.date)
+                      : AppDate.formatDate(peak.date),
                 ),
               ),
             ],
@@ -344,7 +348,7 @@ class _CategoryRow extends StatelessWidget {
             seed: seed,
             size: 38,
           ),
-          const SizedBox(width: 12),
+          AppSpacing.hGapMd,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -365,7 +369,7 @@ class _CategoryRow extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                AppSpacing.gapSm,
                 AppProgressBar(
                   value: entry.share / 100,
                   color: color,
@@ -404,7 +408,8 @@ class _EmptyReport extends StatelessWidget {
           height: MediaQuery.sizeOf(context).height * 0.6,
           child: AppEmptyView(
             title: 'Nothing to report',
-            message: '$message. Record some transactions or pick a different '
+            message:
+                '$message. Record some transactions or pick a different '
                 'date range.',
             icon: Icons.insights_outlined,
           ),

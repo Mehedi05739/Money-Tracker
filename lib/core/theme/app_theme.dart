@@ -25,26 +25,30 @@ class AppTheme {
     );
 
     final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
-    final surfaceAlt =
-        isDark ? AppColors.darkSurfaceAlt : AppColors.lightSurfaceAlt;
+    final surfaceAlt = isDark
+        ? AppColors.darkSurfaceAlt
+        : AppColors.lightSurfaceAlt;
     final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor:
-          isDark ? AppColors.darkBackground : AppColors.lightBackground,
+      scaffoldBackgroundColor: isDark
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
       textTheme: AppTextStyles.textTheme(scheme.onSurface),
       splashFactory: InkSparkle.splashFactory,
       appBarTheme: AppBarTheme(
         centerTitle: false,
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor:
-            isDark ? AppColors.darkBackground : AppColors.lightBackground,
+        backgroundColor: isDark
+            ? AppColors.darkBackground
+            : AppColors.lightBackground,
         foregroundColor: scheme.onSurface,
-        systemOverlayStyle:
-            isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        systemOverlayStyle: isDark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         titleTextStyle: AppTextStyles.titleLarge.copyWith(
           color: scheme.onSurface,
         ),
@@ -79,8 +83,7 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
-          shape:
-              RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
           textStyle: AppTextStyles.titleMedium,
         ),
       ),
@@ -148,8 +151,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
       ),
       listTileTheme: ListTileThemeData(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
       ),
       bottomSheetTheme: BottomSheetThemeData(
@@ -158,9 +160,7 @@ class AppTheme {
         dragHandleColor: border,
         elevation: 0,
         modalElevation: 0,
-        shape: const RoundedRectangleBorder(
-          borderRadius: AppRadius.sheetTop,
-        ),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.sheetTop),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: surface,

@@ -51,7 +51,11 @@ class AppDatabase {
       );
       return _db!;
     } on DatabaseException catch (error, stackTrace) {
-      AppLogger.e('Failed to open database', error: error, stackTrace: stackTrace);
+      AppLogger.e(
+        'Failed to open database',
+        error: error,
+        stackTrace: stackTrace,
+      );
       throw const CacheException('Could not open the local database');
     }
   }

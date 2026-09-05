@@ -14,14 +14,13 @@ class RecurringRepositoryImpl implements RecurringRepository {
   @override
   Future<Result<List<RecurringTransaction>>> getAll({
     bool activeOnly = false,
-  }) =>
-      guard(() => _dao.find(activeOnly: activeOnly), context: 'getRecurring');
+  }) => guard(() => _dao.find(activeOnly: activeOnly), context: 'getRecurring');
 
   @override
   Future<Result<RecurringTransaction>> getById(int id) => guardFound(
-        () => _dao.findById(id),
-        notFoundMessage: 'Recurring transaction not found',
-      );
+    () => _dao.findById(id),
+    notFoundMessage: 'Recurring transaction not found',
+  );
 
   @override
   Future<Result<RecurringTransaction>> create(RecurringTransaction rule) async {
@@ -78,7 +77,9 @@ class RecurringRepositoryImpl implements RecurringRepository {
 
     if (rule.accountId <= 0) errors['account'] = 'Choose an account';
     if (rule.categoryId == null) errors['category'] = 'Choose a category';
-    if (rule.intervalCount < 1) errors['interval'] = 'Interval must be at least 1';
+    if (rule.intervalCount < 1) {
+      errors['interval'] = 'Interval must be at least 1';
+    }
 
     if (rule.type.isTransfer) {
       errors['type'] = 'Transfers cannot be scheduled';

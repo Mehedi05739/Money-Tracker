@@ -44,8 +44,10 @@ class RecurringMapper {
         accountName: row.readStringOrNull(aliasAccountName),
       );
 
-  static Map<String, Object?> toRow(RecurringTransaction rule,
-      {bool includeId = false}) {
+  static Map<String, Object?> toRow(
+    RecurringTransaction rule, {
+    bool includeId = false,
+  }) {
     return {
       if (includeId) RecurringColumns.id: rule.id,
       RecurringColumns.accountId: rule.accountId,
@@ -58,11 +60,13 @@ class RecurringMapper {
       RecurringColumns.frequency: rule.frequency.name,
       RecurringColumns.intervalCount: rule.intervalCount,
       RecurringColumns.startDate: AppDate.toDb(rule.startDate),
-      RecurringColumns.endDate:
-          rule.endDate == null ? null : AppDate.toDb(rule.endDate!),
+      RecurringColumns.endDate: rule.endDate == null
+          ? null
+          : AppDate.toDb(rule.endDate!),
       RecurringColumns.nextRunDate: AppDate.toDb(rule.nextRunDate),
-      RecurringColumns.lastRunDate:
-          rule.lastRunDate == null ? null : AppDate.toDb(rule.lastRunDate!),
+      RecurringColumns.lastRunDate: rule.lastRunDate == null
+          ? null
+          : AppDate.toDb(rule.lastRunDate!),
       RecurringColumns.isActive: asDbBool(rule.isActive),
       RecurringColumns.autoPost: asDbBool(rule.autoPost),
       RecurringColumns.createdAt: AppDate.toDb(rule.createdAt),

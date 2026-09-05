@@ -55,7 +55,8 @@ class DonutChart extends StatelessWidget {
             total: total,
             strokeWidth: strokeWidth,
             progress: progress,
-            emptyColor: theme.progressIndicatorTheme.linearTrackColor ??
+            emptyColor:
+                theme.progressIndicatorTheme.linearTrackColor ??
                 theme.colorScheme.surfaceContainerHighest,
           ),
           child: Center(

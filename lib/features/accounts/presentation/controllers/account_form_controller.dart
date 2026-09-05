@@ -66,10 +66,10 @@ class AccountFormController extends GetxController {
 
     fieldErrors.clear();
     final nameError = Validators.name(nameField.text, field: 'Account name');
-    final balanceError =
-        Validators.nonNegativeAmount(openingBalanceField.text.isEmpty
-            ? '0'
-            : openingBalanceField.text, field: 'Opening balance');
+    final balanceError = Validators.nonNegativeAmount(
+      openingBalanceField.text.isEmpty ? '0' : openingBalanceField.text,
+      field: 'Opening balance',
+    );
 
     if (nameError != null) fieldErrors['name'] = nameError;
     if (balanceError != null) fieldErrors['openingBalance'] = balanceError;
@@ -77,8 +77,9 @@ class AccountFormController extends GetxController {
 
     isSubmitting.value = true;
     final draft = _build();
-    final result =
-        isEditing ? await _repository.update(draft) : await _repository.create(draft);
+    final result = isEditing
+        ? await _repository.update(draft)
+        : await _repository.create(draft);
     isSubmitting.value = false;
 
     return result.fold(

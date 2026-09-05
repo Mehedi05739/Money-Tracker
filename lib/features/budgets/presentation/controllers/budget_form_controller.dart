@@ -26,8 +26,7 @@ class BudgetFormController extends GetxController {
 
   final Rxn<Category> category = Rxn<Category>();
   final Rx<BudgetPeriod> period = BudgetPeriod.monthly.obs;
-  final Rx<DateTime> startDate =
-      DateTime.now().obs;
+  final Rx<DateTime> startDate = DateTime.now().obs;
   final Rx<DateTime> endDate = DateTime.now().obs;
   final RxBool isActive = true.obs;
   final RxBool isOverall = false.obs;
@@ -55,8 +54,9 @@ class BudgetFormController extends GetxController {
   }
 
   Future<void> _bootstrap() async {
-    final result =
-        await _categories.getCategories(type: TransactionType.expense);
+    final result = await _categories.getCategories(
+      type: TransactionType.expense,
+    );
     categories.assignAll(result.dataOrNull ?? const []);
 
     final argument = Get.arguments;
@@ -78,8 +78,9 @@ class BudgetFormController extends GetxController {
     endDate.value = budget.endDate;
     isActive.value = budget.isActive;
     isOverall.value = budget.categoryId == null;
-    category.value =
-        categories.firstWhereOrNull((c) => c.id == budget.categoryId);
+    category.value = categories.firstWhereOrNull(
+      (c) => c.id == budget.categoryId,
+    );
   }
 
   void changePeriod(BudgetPeriod value) {
@@ -160,8 +161,9 @@ class BudgetFormController extends GetxController {
       updatedAt: now,
     );
 
-    final result =
-        isEditing ? await _repository.update(draft) : await _repository.create(draft);
+    final result = isEditing
+        ? await _repository.update(draft)
+        : await _repository.create(draft);
     isSubmitting.value = false;
 
     return result.fold(

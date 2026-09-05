@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/base/view_state.dart';
 import '../../../../core/widgets/app_empty_view.dart';
 import '../../../../core/widgets/app_error_view.dart';
@@ -56,42 +58,44 @@ class TransactionsPage extends GetView<TransactionsController> {
                   onChanged: controller.changeRange,
                 ),
               ),
-              const SizedBox(height: 8),
+              AppSpacing.gapSm,
             ],
           ),
         ),
       ),
-      body: Column(
-        children: [
-          Obx(() {
-            if (controller.state is! LoadedState) {
-              return const SizedBox.shrink();
-            }
-            return _SummaryStrip(controller: controller);
-          }),
-          Expanded(
-            child: RefreshIndicator.adaptive(
-              onRefresh: controller.refreshData,
-              child: Obx(() {
-                final state = controller.state;
+      body: ContentWidth(
+        child: Column(
+          children: [
+            Obx(() {
+              if (controller.state is! LoadedState) {
+                return const SizedBox.shrink();
+              }
+              return _SummaryStrip(controller: controller);
+            }),
+            Expanded(
+              child: RefreshIndicator.adaptive(
+                onRefresh: controller.refreshData,
+                child: Obx(() {
+                  final state = controller.state;
 
-                return switch (state) {
-                  IdleState() || LoadingState() => const AppLoader(),
-                  ErrorState(:final message) => AppErrorView(
+                  return switch (state) {
+                    IdleState() || LoadingState() => const AppLoader(),
+                    ErrorState(:final message) => AppErrorView(
                       message: message,
                       onRetry: controller.load,
                     ),
-                  EmptyState(:final message) => _EmptyLedger(
+                    EmptyState(:final message) => _EmptyLedger(
                       message: message,
                       hasFilters: controller.activeFilterCount > 0,
                       onClear: controller.clearFilters,
                     ),
-                  LoadedState() => _LedgerList(controller: controller),
-                };
-              }),
+                    LoadedState() => _LedgerList(controller: controller),
+                  };
+                }),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -165,7 +169,7 @@ class _LedgerList extends StatelessWidget {
         final groups = controller.groups;
 
         return ListView.builder(
-          padding: const EdgeInsets.only(bottom: 96),
+          padding: const EdgeInsets.only(bottom: AppSpacing.fabClearance),
           physics: const AlwaysScrollableScrollPhysics(),
           itemCount: groups.length + 1,
           itemBuilder: (context, index) {
@@ -228,7 +232,7 @@ class _ListFooter extends StatelessWidget {
           ),
         );
       }
-      if (controller.hasMore.value) return const SizedBox(height: 24);
+      if (controller.hasMore.value) return AppSpacing.gapXl;
 
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
@@ -253,7 +257,10 @@ class _DismissBackground extends StatelessWidget {
       alignment: Alignment.centerRight,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       color: theme.colorScheme.error,
-      child: Icon(Icons.delete_outline_rounded, color: theme.colorScheme.onError),
+      child: Icon(
+        Icons.delete_outline_rounded,
+        color: theme.colorScheme.onError,
+      ),
     );
   }
 }
