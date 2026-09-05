@@ -1,3 +1,4 @@
+import '../../core/enums/transaction_sort.dart';
 import '../../core/enums/transaction_type.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/result.dart';
@@ -69,6 +70,7 @@ abstract class TransactionRepository {
   /// never materialised.
   Future<Result<List<MoneyTransaction>>> getTransactions({
     TransactionFilter filter = const TransactionFilter(),
+    TransactionSort sort = TransactionSort.newestFirst,
     int limit = 30,
     int offset = 0,
   });

@@ -184,6 +184,28 @@ AppDatabase → SQLite
   state — the currency symbol lives in an injected `CurrencyFormatter`, not a
   global, so it has one source of truth and resets with `Get.reset()`.
 
+## Transactions
+
+**Search** covers title, note, description and category name. Category matching
+uses `EXISTS` rather than a join, because `count` and the aggregate queries
+share the same `WHERE` clause and a join there would change their row counts.
+`LIKE` escapes `%` and `_`, so a typed `100%` matches literally.
+
+**Sort** is a closed `TransactionSort` enum mapped to fixed `ORDER BY`
+fragments — a free-form sort string would be user input reaching SQL text.
+Every ordering ends with the row id: without a tiebreaker, rows sharing a
+timestamp or amount can reshuffle between pages and appear twice or not at all.
+
+**Grouping follows the sort.** Date orders keep day sections with a net per
+day; amount and title orders interleave days, so the list switches to a flat
+view with the date on each row instead of a header above almost every one.
+
+**Deleting** asks first, then runs as one SQL transaction that removes the row
+and reverses its effect on the affected account balances. It emits
+`DataChange.transactions`, which refreshes the dashboard totals, the ledger,
+budget spend and spending-plan progress. Goals are not touched: their totals
+come from `goal_contributions`, not from transactions.
+
 ## Keeping screens in sync
 
 The shell keeps tab bodies alive, so a transaction added from the floating

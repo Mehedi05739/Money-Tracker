@@ -15,6 +15,7 @@ import '../features/recurring/presentation/pages/recurring_form_page.dart';
 import '../features/recurring/presentation/pages/recurring_page.dart';
 import '../features/settings/presentation/pages/settings_page.dart';
 import '../features/shell/presentation/pages/shell_page.dart';
+import '../features/transactions/presentation/pages/transaction_detail_page.dart';
 import '../features/transactions/presentation/pages/transaction_form_page.dart';
 import '../features/accounts/presentation/bindings/accounts_binding.dart';
 import '../features/budgets/presentation/bindings/budgets_binding.dart';
@@ -38,6 +39,10 @@ class AppPages {
       name: AppRoutes.shell,
       page: () => const ShellPage(),
       binding: ShellBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.transactionDetail,
+      page: () => const TransactionDetailPage(),
     ),
     GetPage(
       name: AppRoutes.transactionForm,

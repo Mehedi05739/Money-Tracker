@@ -1,3 +1,4 @@
+import '../../core/enums/transaction_sort.dart';
 import '../../core/enums/transaction_type.dart';
 import '../../core/errors/failures.dart';
 import '../../core/utils/date_range.dart';
@@ -17,10 +18,11 @@ class TransactionRepositoryImpl implements TransactionRepository {
   @override
   Future<Result<List<MoneyTransaction>>> getTransactions({
     TransactionFilter filter = const TransactionFilter(),
+    TransactionSort sort = TransactionSort.newestFirst,
     int limit = 30,
     int offset = 0,
   }) => guard(
-    () => _dao.find(filter: filter, limit: limit, offset: offset),
+    () => _dao.find(filter: filter, sort: sort, limit: limit, offset: offset),
     context: 'getTransactions',
   );
 

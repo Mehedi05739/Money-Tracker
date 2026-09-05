@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/database/db_tables.dart';
+import '../../../core/enums/transaction_sort.dart';
 import '../../../core/enums/transaction_type.dart';
 import '../../../domain/entities/analytics.dart';
 import '../../../core/utils/date_utils.dart';
@@ -32,18 +33,37 @@ class TransactionDao {
 
   Future<List<MoneyTransaction>> find({
     TransactionFilter filter = const TransactionFilter(),
+    TransactionSort sort = TransactionSort.newestFirst,
     int limit = 30,
     int offset = 0,
   }) async {
     final clause = _buildWhere(filter);
     final rows = await _db.rawQuery(
       '$_selectWithJoins ${clause.sql} '
-      'ORDER BY t.${TransactionColumns.transactionDate} DESC, t.${TransactionColumns.id} DESC '
+      'ORDER BY ${_orderBy(sort)} '
       'LIMIT ? OFFSET ?',
       [...clause.args, limit, offset],
     );
     return rows.map(TransactionMapper.fromRow).toList();
   }
+
+  /// Fixed SQL per sort option — never built from user input.
+  ///
+  /// Each ends with the id so paging is stable: without a tiebreaker, rows
+  /// sharing a timestamp or amount can reshuffle between pages and appear
+  /// twice or not at all.
+  static String _orderBy(TransactionSort sort) => switch (sort) {
+    TransactionSort.newestFirst =>
+      't.${TransactionColumns.transactionDate} DESC, t.${TransactionColumns.id} DESC',
+    TransactionSort.oldestFirst =>
+      't.${TransactionColumns.transactionDate} ASC, t.${TransactionColumns.id} ASC',
+    TransactionSort.largestFirst =>
+      't.${TransactionColumns.amount} DESC, t.${TransactionColumns.id} DESC',
+    TransactionSort.smallestFirst =>
+      't.${TransactionColumns.amount} ASC, t.${TransactionColumns.id} ASC',
+    TransactionSort.titleAZ =>
+      't.${TransactionColumns.title} COLLATE NOCASE ASC, t.${TransactionColumns.id} ASC',
+  };
 
   Future<int> count(TransactionFilter filter) async {
     final clause = _buildWhere(filter);
@@ -338,13 +358,20 @@ class TransactionDao {
 
     final search = filter.search?.trim();
     if (search != null && search.isNotEmpty) {
+      // EXISTS rather than a join on categories: `count` and the aggregate
+      // queries use this clause without joining, and a join there would change
+      // their row counts.
       conditions.add(
         "(t.${TransactionColumns.title} LIKE ? ESCAPE '\\' "
         "OR t.${TransactionColumns.note} LIKE ? ESCAPE '\\' "
-        "OR t.${TransactionColumns.description} LIKE ? ESCAPE '\\')",
+        "OR t.${TransactionColumns.description} LIKE ? ESCAPE '\\' "
+        'OR EXISTS (SELECT 1 FROM ${Tables.categories} sc '
+        'WHERE sc.${CategoryColumns.id} = t.${TransactionColumns.categoryId} '
+        "AND sc.${CategoryColumns.name} LIKE ? ESCAPE '\\'))",
       );
       final pattern = '%${_escapeLike(search)}%';
       args
+        ..add(pattern)
         ..add(pattern)
         ..add(pattern)
         ..add(pattern);

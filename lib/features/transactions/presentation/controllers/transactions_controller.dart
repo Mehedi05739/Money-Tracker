@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../../../core/base/base_controller.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/enums/transaction_sort.dart';
 import '../../../../core/enums/transaction_type.dart';
 import '../../../../core/events/app_events.dart';
 import '../../../../core/utils/date_range.dart';
@@ -52,6 +53,7 @@ class TransactionsController extends BaseController {
   final Rx<TransactionFilter> filter = const TransactionFilter().obs;
   final Rx<DateRange> range = DateRange.fromPreset(DateRangePreset.thisMonth)
       .obs;
+  final Rx<TransactionSort> sort = TransactionSort.newestFirst.obs;
 
   final RxBool isLoadingMore = false.obs;
   final RxBool hasMore = true.obs;
@@ -69,6 +71,18 @@ class TransactionsController extends BaseController {
       filter.value.copyWith(range: range.value);
 
   int get activeFilterCount => filter.value.activeCount;
+
+  /// The single type the list is filtered to, or null for "All".
+  ///
+  /// The quick tabs offer one type at a time; the filter sheet can still set
+  /// several, in which case no tab is highlighted.
+  TransactionType? get activeType =>
+      filter.value.types.length == 1 ? filter.value.types.first : null;
+
+  bool get isShowingAllTypes => filter.value.types.isEmpty;
+
+  /// Date grouping only makes sense while rows arrive in date order.
+  bool get groupsByDate => sort.value.groupsByDate;
 
   @override
   void onInit() {
@@ -111,6 +125,7 @@ class TransactionsController extends BaseController {
     final countFuture = _transactions.count(effectiveFilter);
     final pageFuture = _transactions.getTransactions(
       filter: effectiveFilter,
+      sort: sort.value,
       limit: AppConstants.pageSize,
     );
 
@@ -150,6 +165,7 @@ class TransactionsController extends BaseController {
     isLoadingMore.value = true;
     final result = await _transactions.getTransactions(
       filter: effectiveFilter,
+      sort: sort.value,
       limit: AppConstants.pageSize,
       offset: _offset,
     );
@@ -207,6 +223,21 @@ class TransactionsController extends BaseController {
     applyFilter(filter.value.copyWith(types: types));
   }
 
+  /// Quick tabs: one type, or null for all of them.
+  void showOnlyType(TransactionType? type) {
+    if (type == null && isShowingAllTypes) return;
+    if (type != null && activeType == type) return;
+    applyFilter(
+      filter.value.copyWith(types: type == null ? <TransactionType>{} : {type}),
+    );
+  }
+
+  void changeSort(TransactionSort value) {
+    if (value == sort.value) return;
+    sort.value = value;
+    load(showLoader: false);
+  }
+
   Future<void> deleteTransaction(MoneyTransaction transaction) async {
     final result = await _transactions.delete(transaction.id);
 
@@ -231,7 +262,15 @@ class TransactionsController extends BaseController {
 
   /// Groups the loaded page into day sections. Runs once per page rather than
   /// on every frame of the list.
+  ///
+  /// Skipped when the sort interleaves days: grouping an amount-ordered list
+  /// by date would produce a header above almost every row.
   void _rebuildGroups() {
+    if (!groupsByDate) {
+      groups.clear();
+      return;
+    }
+
     final byDay = <String, List<MoneyTransaction>>{};
 
     for (final transaction in transactions) {

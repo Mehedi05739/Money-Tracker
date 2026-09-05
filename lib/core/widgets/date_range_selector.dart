@@ -13,6 +13,7 @@ class DateRangeSelector extends StatelessWidget {
     required this.onChanged,
     this.presets = const [
       DateRangePreset.today,
+      DateRangePreset.yesterday,
       DateRangePreset.thisWeek,
       DateRangePreset.thisMonth,
       DateRangePreset.lastMonth,

@@ -15,12 +15,16 @@ class TransactionTile extends StatelessWidget {
     required this.transaction,
     this.onTap,
     this.showDate = false,
+    this.showFullDate = false,
     this.dense = false,
   });
 
   final MoneyTransaction transaction;
   final VoidCallback? onTap;
   final bool showDate;
+
+  /// Shows the day as well as the time, for lists that have no date headers.
+  final bool showFullDate;
   final bool dense;
 
   @override
@@ -76,6 +80,34 @@ class TransactionTile extends StatelessWidget {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
+                  // The note is why a row is often recognisable at all —
+                  // "Groceries · Cash" describes dozens of rows, the note
+                  // describes this one.
+                  if (_note != null) ...[
+                    AppSpacing.gapXxs,
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.sticky_note_2_outlined,
+                          size: 11,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            _note!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontSize: 11,
+                              fontStyle: FontStyle.italic,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -91,7 +123,9 @@ class TransactionTile extends StatelessWidget {
                 if (showDate) ...[
                   AppSpacing.gapXxs,
                   Text(
-                    AppDate.formatTime(transaction.transactionDate),
+                    showFullDate
+                        ? AppDate.formatRelativeDay(transaction.transactionDate)
+                        : AppDate.formatTime(transaction.transactionDate),
                     style: theme.textTheme.bodySmall?.copyWith(
                       fontSize: 11,
                       color: theme.colorScheme.onSurfaceVariant,
@@ -104,6 +138,17 @@ class TransactionTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// The note, when there is one worth showing.
+  String? get _note {
+    final note = transaction.note?.trim();
+    if (note == null || note.isEmpty) return null;
+    // A note identical to the title adds nothing to the row.
+    if (note.toLowerCase() == transaction.title.trim().toLowerCase()) {
+      return null;
+    }
+    return note;
   }
 
   String get _subtitle {

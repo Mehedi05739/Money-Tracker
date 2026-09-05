@@ -3,6 +3,7 @@ import 'date_utils.dart';
 /// Named ranges offered by the dashboard and report filters.
 enum DateRangePreset {
   today,
+  yesterday,
   thisWeek,
   thisMonth,
   lastMonth,
@@ -12,6 +13,7 @@ enum DateRangePreset {
 
   String get label => switch (this) {
     DateRangePreset.today => 'Today',
+    DateRangePreset.yesterday => 'Yesterday',
     DateRangePreset.thisWeek => 'This week',
     DateRangePreset.thisMonth => 'This month',
     DateRangePreset.lastMonth => 'Last month',
@@ -38,6 +40,14 @@ class DateRange {
         end: AppDate.endOfDay(today),
         preset: preset,
       ),
+      DateRangePreset.yesterday => () {
+        final day = today.subtract(const Duration(days: 1));
+        return DateRange(
+          start: AppDate.startOfDay(day),
+          end: AppDate.endOfDay(day),
+          preset: preset,
+        );
+      }(),
       DateRangePreset.thisWeek => DateRange(
         start: AppDate.startOfWeek(today),
         end: AppDate.endOfWeek(today),
