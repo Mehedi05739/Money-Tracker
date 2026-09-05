@@ -1,17 +1,33 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/formatters.dart';
-import '../../../../domain/entities/analytics.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/utils/formatters.dart';
+import '../../../../domain/entities/analytics.dart';
 
-/// Hero card: total balance across accounts, with income and expense for the
-/// selected period beneath it.
+/// The headline card: balance, the scope it covers, and the period's flows.
 class BalanceHeader extends StatelessWidget {
-  const BalanceHeader({super.key, required this.summary});
+  const BalanceHeader({
+    super.key,
+    required this.summary,
+    required this.scopeLabel,
+    required this.isHidden,
+    required this.onToggleHidden,
+    required this.onPickScope,
+    this.maskedText = '••••••',
+  });
 
   final DashboardSummary summary;
+
+  /// "All accounts", or the selected account's name.
+  final String scopeLabel;
+  final bool isHidden;
+  final VoidCallback onToggleHidden;
+  final VoidCallback onPickScope;
+  final String maskedText;
+
+  String _amount(double value) => isHidden ? maskedText : Money.format(value);
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +35,12 @@ class BalanceHeader extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
       decoration: BoxDecoration(
         borderRadius: AppRadius.xxlAll,
         gradient: const LinearGradient(
@@ -31,16 +52,37 @@ class BalanceHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Flexible(
+                child: _ScopeChip(label: scopeLabel, onTap: onPickScope),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: onToggleHidden,
+                tooltip: isHidden ? 'Show balance' : 'Hide balance',
+                visualDensity: VisualDensity.compact,
+                icon: Icon(
+                  isHidden
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: Colors.white70,
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
+          AppSpacing.gapSm,
           Text(
             'Total balance',
             style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
           ),
-          AppSpacing.gapSm,
+          AppSpacing.gapXs,
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
-              Money.format(summary.totalBalance),
+              _amount(summary.totalBalance),
               style: theme.textTheme.displaySmall?.copyWith(
                 color: Colors.white,
               ),
@@ -52,7 +94,7 @@ class BalanceHeader extends StatelessWidget {
               Expanded(
                 child: _Flow(
                   label: 'Income',
-                  amount: summary.totals.income,
+                  value: _amount(summary.totals.income),
                   icon: Icons.south_west_rounded,
                   changePercent: summary.incomeChangePercent,
                   higherIsBetter: true,
@@ -62,12 +104,12 @@ class BalanceHeader extends StatelessWidget {
                 width: 1,
                 height: 38,
                 color: Colors.white24,
-                margin: const EdgeInsets.symmetric(horizontal: 14),
+                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               ),
               Expanded(
                 child: _Flow(
                   label: 'Expense',
-                  amount: summary.totals.expense,
+                  value: _amount(summary.totals.expense),
                   icon: Icons.north_east_rounded,
                   changePercent: summary.expenseChangePercent,
                   higherIsBetter: false,
@@ -81,17 +123,76 @@ class BalanceHeader extends StatelessWidget {
   }
 }
 
+/// Which accounts the figures cover. Tapping opens the selector.
+class _ScopeChip extends StatelessWidget {
+  const _ScopeChip({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Semantics(
+      button: true,
+      label: 'Showing $label. Change account',
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: AppRadius.pillAll,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.account_balance_wallet_outlined,
+                  size: 15,
+                  color: Colors.white,
+                ),
+                AppSpacing.hGapSm,
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 17,
+                  color: Colors.white70,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _Flow extends StatelessWidget {
   const _Flow({
     required this.label,
-    required this.amount,
+    required this.value,
     required this.icon,
     required this.changePercent,
     required this.higherIsBetter,
   });
 
   final String label;
-  final double amount;
+  final String value;
   final IconData icon;
   final double? changePercent;
   final bool higherIsBetter;
@@ -118,12 +219,12 @@ class _Flow extends StatelessWidget {
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
           child: Text(
-            Money.format(amount),
+            value,
             style: theme.textTheme.titleLarge?.copyWith(color: Colors.white),
           ),
         ),
         if (changePercent != null) ...[
-          const SizedBox(height: 3),
+          AppSpacing.gapXxs,
           _ChangeBadge(percent: changePercent!, higherIsBetter: higherIsBetter),
         ],
       ],
@@ -131,7 +232,7 @@ class _Flow extends StatelessWidget {
   }
 }
 
-/// Period-over-period delta. Green means "good for the user", which is a rise
+/// Period-over-period delta. Green means good for the user, which is a rise
 /// for income and a fall for spending.
 class _ChangeBadge extends StatelessWidget {
   const _ChangeBadge({required this.percent, required this.higherIsBetter});

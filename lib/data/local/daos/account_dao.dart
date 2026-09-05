@@ -87,6 +87,16 @@ class AccountDao {
     return rows.first.readDoubleOr('total');
   }
 
+  /// Current balance of one account, without loading the row.
+  Future<double> balanceOf(int accountId) async {
+    final rows = await _db.rawQuery(
+      'SELECT COALESCE(${AccountColumns.currentBalance}, 0) AS balance '
+      'FROM ${Tables.accounts} WHERE ${AccountColumns.id} = ?',
+      [accountId],
+    );
+    return rows.isEmpty ? 0 : rows.first.readDoubleOr('balance');
+  }
+
   Future<int> count() async {
     final rows = await _db.rawQuery(
       'SELECT COUNT(*) AS c FROM ${Tables.accounts}',

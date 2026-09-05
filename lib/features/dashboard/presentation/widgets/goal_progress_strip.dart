@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/category_icons.dart';
+import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_progress_bar.dart';
@@ -38,6 +40,17 @@ class GoalProgressStrip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// `by 12 Mar 2027`, or how overdue the goal is.
+String _targetLabel(FinancialGoal goal) {
+  final target = goal.targetDate!;
+  if (goal.isAchieved) return AppDate.formatDate(target);
+  if (goal.isOverdue) return 'Overdue · ${AppDate.formatDate(target)}';
+
+  final days = goal.daysRemaining ?? 0;
+  if (days <= 31) return '$days days left';
+  return 'by ${AppDate.formatDate(target)}';
 }
 
 class _GoalCard extends StatelessWidget {
@@ -105,6 +118,37 @@ class _GoalCard extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
+          // The deadline is what makes a goal actionable rather than a wish.
+          if (goal.targetDate != null) ...[
+            AppSpacing.gapXxs,
+            Row(
+              children: [
+                Icon(
+                  goal.isOverdue
+                      ? Icons.event_busy_rounded
+                      : Icons.event_rounded,
+                  size: 11,
+                  color: goal.isOverdue
+                      ? context.expenseColor
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    _targetLabel(goal),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 10.5,
+                      color: goal.isOverdue
+                          ? context.expenseColor
+                          : theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

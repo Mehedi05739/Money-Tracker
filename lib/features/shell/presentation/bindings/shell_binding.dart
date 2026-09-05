@@ -8,6 +8,7 @@ import '../../../../domain/repositories/dashboard_repository.dart';
 import '../../../../domain/repositories/spending_plan_repository.dart';
 import '../../../../domain/repositories/transaction_repository.dart';
 import '../../../dashboard/presentation/controllers/dashboard_controller.dart';
+import '../../../settings/presentation/controllers/settings_controller.dart';
 import '../../../plans/presentation/controllers/plans_controller.dart';
 import '../../../reports/presentation/controllers/reports_controller.dart';
 import '../../../transactions/presentation/controllers/transactions_controller.dart';
@@ -27,6 +28,7 @@ class ShellBinding extends Bindings {
       () => DashboardController(
         Get.find<DashboardRepository>(),
         Get.find<AppEvents>(),
+        Get.find<SettingsController>(),
       ),
       fenix: true,
     );

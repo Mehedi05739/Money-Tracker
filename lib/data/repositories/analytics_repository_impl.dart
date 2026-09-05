@@ -40,40 +40,61 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
   Future<Result<List<TrendPoint>>> getMonthlyTrend(DateRange range) =>
       guard(() => _dao.monthlyTrend(range), context: 'monthlyTrend');
 
-  /// Issues the dashboard's queries concurrently on the shared connection, so
-  /// the screen costs one await instead of a serial chain of eight.
+  /// Assembles the dashboard in four queries, not a dozen.
+  ///
+  /// Headline totals are one conditional aggregate; the category breakdown is
+  /// a grouped query plus its grand total; the trend is one more. Everything
+  /// starts together and is awaited in order, so the cost is one round trip of
+  /// wall time.
   @override
-  Future<Result<DashboardSummary>> getDashboardSummary(DateRange range) {
+  Future<Result<DashboardSummary>> getDashboardSummary(
+    DateRange range, {
+    int? accountId,
+  }) {
     return guard(() async {
-      final now = DateTime.now();
-      final monthRange = DateRange.fromPreset(DateRangePreset.thisMonth);
+      final totalsFuture = _dao.dashboardTotals(range, accountId: accountId);
+      final balanceFuture = accountId == null
+          ? _accountDao.totalBalance()
+          : _accountDao.balanceOf(accountId);
+      final breakdownFuture = _dao.categoryBreakdown(
+        range,
+        limit: dashboardCategoryLimit,
+        accountId: accountId,
+      );
+      final trendFuture = _trendFor(range, accountId: accountId);
+      final accountFuture = accountId == null
+          ? null
+          : _accountDao.findById(accountId);
 
-      final results = await Future.wait([
-        _dao.totals(range),
-        _dao.totals(range.previous),
-        _accountDao.totalBalance(),
-        _dao.spendOnDay(now),
-        _dao.expenseTotal(monthRange),
-        _dao.categoryBreakdown(range, limit: dashboardCategoryLimit),
-        _trendFor(range),
-      ]);
+      final totals = await totalsFuture;
+      final balance = await balanceFuture;
+      final breakdown = await breakdownFuture;
+      final trend = await trendFuture;
+      final account = await accountFuture;
 
       return DashboardSummary(
         range: range,
-        totals: results[0] as PeriodTotals,
-        previousTotals: results[1] as PeriodTotals,
-        totalBalance: results[2] as double,
-        todaySpend: results[3] as double,
-        monthSpend: results[4] as double,
-        breakdown: results[5] as CategoryBreakdown,
-        trend: results[6] as List<TrendPoint>,
+        totals: totals.current,
+        previousTotals: totals.previous,
+        totalBalance: balance,
+        todaySpend: totals.todaySpend,
+        monthSpend: totals.monthSpend,
+        breakdown: breakdown,
+        trend: trend,
+        accountId: accountId,
+        accountName: account?.name,
       );
     }, context: 'dashboardSummary');
   }
 
   /// Long windows are charted by month; short ones day by day.
-  Future<List<TrendPoint>> _trendFor(DateRange range) async {
-    if (range.dayCount > 62) return _dao.monthlyTrend(range);
-    return AnalyticsDao.fillDailyGaps(await _dao.dailyTrend(range), range);
+  Future<List<TrendPoint>> _trendFor(DateRange range, {int? accountId}) async {
+    if (range.dayCount > 62) {
+      return _dao.monthlyTrend(range, accountId: accountId);
+    }
+    return AnalyticsDao.fillDailyGaps(
+      await _dao.dailyTrend(range, accountId: accountId),
+      range,
+    );
   }
 }

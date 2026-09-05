@@ -119,6 +119,7 @@ class DependencyInjection {
           budgets: Get.find<BudgetRepository>(),
           plans: Get.find<SpendingPlanRepository>(),
           goals: Get.find<GoalRepository>(),
+          accountsRepository: Get.find<AccountRepository>(),
         ),
         permanent: true,
       );

@@ -1,5 +1,6 @@
 import '../../core/utils/date_range.dart';
 import '../../core/utils/result.dart';
+import '../entities/account.dart';
 import '../entities/analytics.dart';
 import '../entities/budget_status.dart';
 import '../entities/financial_goal.dart';
@@ -14,10 +15,19 @@ import '../entities/spending_plan_progress.dart';
 /// does not re-query transactions.
 abstract class DashboardRepository {
   /// Every section at once, for the first load and pull-to-refresh.
-  Future<Result<DashboardData>> load(DateRange range);
+  ///
+  /// [accountId] scopes the figures to one account; `null` means all accounts.
+  Future<Result<DashboardData>> load(DateRange range, {int? accountId});
 
-  Future<Result<DashboardSummary>> getSummary(DateRange range);
-  Future<Result<List<MoneyTransaction>>> getRecent({int limit});
+  Future<Result<DashboardSummary>> getSummary(
+    DateRange range, {
+    int? accountId,
+  });
+
+  Future<Result<List<MoneyTransaction>>> getRecent({int limit, int? accountId});
+
+  /// Accounts offered by the dashboard's account selector.
+  Future<Result<List<Account>>> getAccounts();
   Future<Result<List<BudgetStatus>>> getBudgetStatuses();
   Future<Result<SpendingPlanProgress?>> getCurrentPlan();
   Future<Result<List<FinancialGoal>>> getActiveGoals();
@@ -31,6 +41,7 @@ class DashboardData {
     required this.budgets,
     required this.currentPlan,
     required this.goals,
+    required this.accounts,
   });
 
   final DashboardSummary summary;
@@ -38,4 +49,7 @@ class DashboardData {
   final List<BudgetStatus> budgets;
   final SpendingPlanProgress? currentPlan;
   final List<FinancialGoal> goals;
+
+  /// For the account selector on the balance card.
+  final List<Account> accounts;
 }

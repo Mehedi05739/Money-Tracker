@@ -20,6 +20,108 @@ class AnalyticsDao {
   static const String _excludeTransfers =
       "${TransactionColumns.type} <> 'transfer'";
 
+  /// `AND account_id = ?` when the dashboard is scoped to one account.
+  ///
+  /// Returned as SQL plus its bound value so the caller can never interleave
+  /// them wrongly — the value is always a parameter, never interpolated.
+  /// [alias] is the table alias used by the query, if any.
+  static ({String sql, List<Object?> args}) _accountScope(
+    int? accountId, {
+    String alias = '',
+  }) {
+    if (accountId == null) return (sql: '', args: const []);
+    final prefix = alias.isEmpty ? '' : '$alias.';
+    return (
+      sql: ' AND $prefix${TransactionColumns.accountId} = ?',
+      args: [accountId],
+    );
+  }
+
+  /// Every headline figure the dashboard shows, in one pass.
+  ///
+  /// The current period, the preceding one, today and this month used to be
+  /// four separate queries over the same table. Conditional aggregation reads
+  /// the widest span once and buckets the rows as it goes.
+  Future<DashboardTotals> dashboardTotals(
+    DateRange range, {
+    int? accountId,
+  }) async {
+    final now = DateTime.now();
+    final previous = range.previous;
+    final today = DateRange(
+      start: AppDate.startOfDay(now),
+      end: AppDate.endOfDay(now),
+    );
+    final month = DateRange.fromPreset(DateRangePreset.thisMonth, now: now);
+
+    // Scan only as far as the widest window actually needs.
+    final spanStart = [
+      range.start,
+      previous.start,
+      today.start,
+      month.start,
+    ].reduce((a, b) => a.isBefore(b) ? a : b);
+    final spanEnd = [
+      range.end,
+      previous.end,
+      today.end,
+      month.end,
+    ].reduce((a, b) => a.isAfter(b) ? a : b);
+
+    final scope = _accountScope(accountId);
+
+    String sumWhen(String type, String startArg, String endArg) =>
+        "COALESCE(SUM(CASE WHEN ${TransactionColumns.type} = '$type' "
+        'AND ${TransactionColumns.transactionDate} BETWEEN $startArg AND $endArg '
+        'THEN ${TransactionColumns.amount} END), 0)';
+
+    final rows = await _db.rawQuery(
+      '''
+      SELECT
+        ${sumWhen('income', '?', '?')}  AS income,
+        ${sumWhen('expense', '?', '?')} AS expense,
+        COUNT(CASE WHEN ${TransactionColumns.transactionDate} BETWEEN ? AND ?
+                   THEN 1 END)          AS tx_count,
+        ${sumWhen('income', '?', '?')}  AS prev_income,
+        ${sumWhen('expense', '?', '?')} AS prev_expense,
+        ${sumWhen('expense', '?', '?')} AS today_expense,
+        ${sumWhen('expense', '?', '?')} AS month_expense
+      FROM ${Tables.transactions}
+      WHERE $_excludeTransfers
+        AND ${TransactionColumns.transactionDate} BETWEEN ? AND ?
+        ${scope.sql}
+      ''',
+      [
+        range.startDb, range.endDb, // income
+        range.startDb, range.endDb, // expense
+        range.startDb, range.endDb, // count
+        previous.startDb, previous.endDb,
+        previous.startDb, previous.endDb,
+        today.startDb, today.endDb,
+        month.startDb, month.endDb,
+        AppDate.toDb(spanStart), AppDate.toDb(spanEnd),
+        ...scope.args,
+      ],
+    );
+
+    final row = rows.first;
+    return DashboardTotals(
+      current: PeriodTotals(
+        income: row.readDoubleOr('income'),
+        expense: row.readDoubleOr('expense'),
+        transactionCount: row.readIntOrNull('tx_count') ?? 0,
+        range: range,
+      ),
+      previous: PeriodTotals(
+        income: row.readDoubleOr('prev_income'),
+        expense: row.readDoubleOr('prev_expense'),
+        range: previous,
+      ),
+      todaySpend: row.readDoubleOr('today_expense'),
+      monthSpend: row.readDoubleOr('month_expense'),
+    );
+  }
+
   Future<PeriodTotals> totals(DateRange range) async {
     final rows = await _db.rawQuery(
       '''
@@ -82,7 +184,11 @@ class AnalyticsDao {
     DateRange range, {
     TransactionType type = TransactionType.expense,
     int limit = 20,
+    int? accountId,
   }) async {
+    // The grouped query aliases the table as `t`; the total query does not.
+    final scopedT = _accountScope(accountId, alias: 't');
+    final scope = _accountScope(accountId);
     final rows = await _db.rawQuery(
       '''
       SELECT t.${TransactionColumns.categoryId}      AS category_id,
@@ -96,11 +202,12 @@ class AnalyticsDao {
              ON c.${CategoryColumns.id} = t.${TransactionColumns.categoryId}
       WHERE t.${TransactionColumns.type} = ?
         AND t.${TransactionColumns.transactionDate} BETWEEN ? AND ?
+        ${scopedT.sql}
       GROUP BY t.${TransactionColumns.categoryId}
       ORDER BY total DESC
       LIMIT ?
       ''',
-      [type.name, range.startDb, range.endDb, limit],
+      [type.name, range.startDb, range.endDb, ...scopedT.args, limit],
     );
 
     final totals = await _db.rawQuery(
@@ -110,8 +217,9 @@ class AnalyticsDao {
       FROM ${Tables.transactions}
       WHERE ${TransactionColumns.type} = ?
         AND ${TransactionColumns.transactionDate} BETWEEN ? AND ?
+        ${scope.sql}
       ''',
-      [type.name, range.startDb, range.endDb],
+      [type.name, range.startDb, range.endDb, ...scope.args],
     );
 
     final grandTotal = totals.first.readDoubleOr('grand_total');
@@ -136,7 +244,8 @@ class AnalyticsDao {
 
   /// One point per day that has data. Gaps are filled by the caller so the
   /// query stays a plain aggregate.
-  Future<List<TrendPoint>> dailyTrend(DateRange range) async {
+  Future<List<TrendPoint>> dailyTrend(DateRange range, {int? accountId}) async {
+    final scope = _accountScope(accountId);
     final rows = await _db.rawQuery(
       '''
       SELECT substr(${TransactionColumns.transactionDate}, 1, 10) AS day,
@@ -147,10 +256,11 @@ class AnalyticsDao {
       FROM ${Tables.transactions}
       WHERE $_excludeTransfers
         AND ${TransactionColumns.transactionDate} BETWEEN ? AND ?
+        ${scope.sql}
       GROUP BY day
       ORDER BY day ASC
       ''',
-      [range.startDb, range.endDb],
+      [range.startDb, range.endDb, ...scope.args],
     );
 
     return rows.map((row) {
@@ -164,7 +274,11 @@ class AnalyticsDao {
     }).toList();
   }
 
-  Future<List<TrendPoint>> monthlyTrend(DateRange range) async {
+  Future<List<TrendPoint>> monthlyTrend(
+    DateRange range, {
+    int? accountId,
+  }) async {
+    final scope = _accountScope(accountId);
     final rows = await _db.rawQuery(
       '''
       SELECT substr(${TransactionColumns.transactionDate}, 1, 7) AS month,
@@ -175,10 +289,11 @@ class AnalyticsDao {
       FROM ${Tables.transactions}
       WHERE $_excludeTransfers
         AND ${TransactionColumns.transactionDate} BETWEEN ? AND ?
+        ${scope.sql}
       GROUP BY month
       ORDER BY month ASC
       ''',
-      [range.startDb, range.endDb],
+      [range.startDb, range.endDb, ...scope.args],
     );
 
     return rows.map((row) {

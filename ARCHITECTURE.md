@@ -214,6 +214,32 @@ every event meant saving a goal re-queried the ledger.
    so `core/utils/extensions.dart` only adds names GetX does not already
    provide.
 
+## Dashboard
+
+Sections, in the order they answer questions: header (greeting, date, settings)
+→ balance card (total, account scope, hide toggle) → period selector → quick
+actions → savings and today's spend → budget status → spending overview →
+recent activity → spending plan → goals.
+
+**Account scope.** The balance card's chip picks one account or all of them.
+Scoping pushes an `account_id = ?` predicate into the totals, breakdown and
+trend queries rather than filtering rows in Dart, and swaps the balance for
+that account's own. Budgets, plans and goals are not account-scoped, so
+changing the scope reloads only the summary and the recent list.
+
+**Hidden balances.** The toggle masks every monetary figure while leaving
+context ("0% of income kept", "Top: Food & Drinks") readable. The choice is
+persisted in `app_settings`, so opening the app in public does not reveal
+figures first and hide them after.
+
+**Query budget.** A full load is 12 statements: the headline totals are one
+conditional aggregate covering the current period, the previous period, today
+and this month in a single scan — those were four separate queries — plus the
+account balance, the category breakdown and its grand total, the trend, recent
+rows, the account list, budget statuses, the current plan (3), and goals.
+Everything starts together and is awaited in order, so it costs one round trip
+of wall time.
+
 ## Performance
 
 - Reports and dashboards are indexed `GROUP BY` aggregates. No screen loads

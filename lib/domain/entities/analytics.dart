@@ -163,6 +163,31 @@ class TrendPoint {
   double get net => income - expense;
 }
 
+/// The four period totals the dashboard header needs, read in one pass.
+///
+/// Kept together because they come from a single query: computing them
+/// separately meant four scans of the same table for numbers that sit inches
+/// apart on screen.
+class DashboardTotals {
+  const DashboardTotals({
+    required this.current,
+    required this.previous,
+    required this.todaySpend,
+    required this.monthSpend,
+  });
+
+  DashboardTotals.empty(DateRange range)
+    : current = PeriodTotals.empty(range),
+      previous = PeriodTotals.empty(range.previous),
+      todaySpend = 0,
+      monthSpend = 0;
+
+  final PeriodTotals current;
+  final PeriodTotals previous;
+  final double todaySpend;
+  final double monthSpend;
+}
+
 /// Everything the dashboard renders, assembled in one repository round trip.
 class DashboardSummary {
   const DashboardSummary({
@@ -174,6 +199,8 @@ class DashboardSummary {
     required this.monthSpend,
     required this.breakdown,
     required this.trend,
+    this.accountId,
+    this.accountName,
   });
 
   DashboardSummary.empty(this.range)
@@ -183,7 +210,9 @@ class DashboardSummary {
       todaySpend = 0,
       monthSpend = 0,
       breakdown = const CategoryBreakdown.empty(),
-      trend = const [];
+      trend = const [],
+      accountId = null,
+      accountName = null;
 
   final DateRange range;
   final PeriodTotals totals;
@@ -193,6 +222,12 @@ class DashboardSummary {
   final double monthSpend;
   final CategoryBreakdown breakdown;
   final List<TrendPoint> trend;
+
+  /// The account the figures are scoped to, or `null` for all accounts.
+  final int? accountId;
+  final String? accountName;
+
+  bool get isScopedToAccount => accountId != null;
 
   List<CategorySpending> get topCategories => breakdown.entries;
 

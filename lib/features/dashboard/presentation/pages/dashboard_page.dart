@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/base/view_state.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/formatters.dart';
@@ -17,16 +16,20 @@ import '../../../../core/widgets/section_header.dart';
 import '../../../../core/widgets/stat_tile.dart';
 import '../../../../domain/entities/analytics.dart';
 import '../../../../routes/app_routes.dart';
+import '../../../../core/enums/transaction_type.dart';
 import '../../../shell/presentation/controllers/shell_controller.dart';
 import '../../../transactions/presentation/pages/transaction_form_page.dart';
 import '../../../transactions/presentation/widgets/quick_add_sheet.dart';
 import '../../../transactions/presentation/widgets/transaction_tile.dart';
 import '../controllers/dashboard_controller.dart';
+import '../widgets/account_scope_sheet.dart';
 import '../widgets/balance_header.dart';
 import '../widgets/budget_summary_card.dart';
 import '../widgets/category_breakdown_card.dart';
 import '../widgets/goal_progress_strip.dart';
+import '../widgets/dashboard_header.dart';
 import '../widgets/plan_progress_card.dart';
+import '../widgets/quick_actions_row.dart';
 
 /// The dashboard answers, in order: what do I have, what came in and went out,
 /// am I saving, am I within budget, where is it going, and what happened
@@ -39,7 +42,9 @@ class DashboardPage extends GetView<DashboardController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(AppConstants.appName),
+        titleSpacing: AppSpacing.base,
+        title: const DashboardHeader(),
+        toolbarHeight: 72,
         actions: [
           IconButton(
             tooltip: 'Accounts',
@@ -79,6 +84,16 @@ class DashboardPage extends GetView<DashboardController> {
   }
 }
 
+/// Opens the account selector, including an "All accounts" entry.
+Future<void> _pickAccount(BuildContext context) async {
+  final controller = Get.find<DashboardController>();
+  final picked = await AccountScopeSheet.show(
+    accounts: controller.accounts,
+    selectedId: controller.selectedAccountId.value,
+  );
+  if (picked != null) controller.selectAccount(picked.accountId);
+}
+
 class _DashboardBody extends StatelessWidget {
   const _DashboardBody({required this.summary, required this.controller});
 
@@ -99,7 +114,16 @@ class _DashboardBody extends StatelessWidget {
             AppSpacing.base,
             AppSpacing.md,
           ),
-          child: BalanceHeader(summary: summary),
+          child: Obx(
+            () => BalanceHeader(
+              summary: summary,
+              scopeLabel: controller.scopeLabel,
+              isHidden: controller.balancesHidden.value,
+              onToggleHidden: controller.toggleBalanceVisibility,
+              onPickScope: () => _pickAccount(context),
+              maskedText: DashboardController.maskedAmount,
+            ),
+          ),
         ),
         Obx(
           () => DateRangeSelector(
@@ -109,10 +133,23 @@ class _DashboardBody extends StatelessWidget {
         ),
         AppSpacing.gapBase,
 
-        // 2 — savings, and what today has cost so far.
-        _MetricRow(summary: summary),
+        // 2 — the four things people open the app to do.
+        Padding(
+          padding: AppSpacing.screenH,
+          child: QuickActionsRow(
+            onAddExpense: () => QuickAddSheet.show(),
+            onAddIncome: () => QuickAddSheet.show(type: TransactionType.income),
+            onTransfer: () =>
+                QuickAddSheet.show(type: TransactionType.transfer),
+            onAddGoal: () => Get.toNamed(AppRoutes.goalForm),
+          ),
+        ),
+        AppSpacing.gapBase,
 
-        // 3 — budget status.
+        // 3 — savings, and what today has cost so far.
+        _MetricRow(summary: summary, controller: controller),
+
+        // 4 — budget status.
         Obx(() {
           final overview = controller.budgetOverview;
           if (overview.isEmpty) return const SizedBox.shrink();
@@ -130,7 +167,7 @@ class _DashboardBody extends StatelessWidget {
           );
         }),
 
-        // 4 — spending overview.
+        // 5 — spending overview.
         const SectionHeader(title: 'Where your money goes'),
         Padding(
           padding: AppSpacing.screenH,
@@ -153,7 +190,7 @@ class _DashboardBody extends StatelessWidget {
           ),
         ),
 
-        // 5 — recent activity.
+        // 6 — recent activity.
         SectionHeader(
           title: 'Recent activity',
           actionLabel: 'See all',
@@ -236,43 +273,53 @@ class _DashboardBody extends StatelessWidget {
 /// Savings and today's spend. Monthly totals and averages live in Reports —
 /// repeating them here is what turns a dashboard into a wall of numbers.
 class _MetricRow extends StatelessWidget {
-  const _MetricRow({required this.summary});
+  const _MetricRow({required this.summary, required this.controller});
 
   final DashboardSummary summary;
+  final DashboardController controller;
 
   @override
   Widget build(BuildContext context) {
     final totals = summary.totals;
     final positive = totals.netSavings >= 0;
 
-    final tiles = <Widget>[
-      StatTile(
-        label: positive ? 'Saved' : 'Overspent',
-        icon: Icons.savings_outlined,
-        value: Money.compact(totals.netSavings.abs()),
-        valueColor: positive ? context.incomeColor : context.expenseColor,
-        footnote: '${totals.savingsRate.toStringAsFixed(0)}% of income kept',
-      ),
-      StatTile(
-        label: 'Spent today',
-        icon: Icons.today_outlined,
-        value: Money.compact(summary.todaySpend),
-        footnote: summary.highestCategory == null
-            ? null
-            : 'Top: ${summary.highestCategory!.categoryName}',
-      ),
-    ];
-
+    // Scoped narrowly: only these two figures depend on the mask, so toggling
+    // it must not rebuild the charts or the ledger below.
     return Padding(
       padding: AppSpacing.screenH,
-      child: Row(
-        children: [
-          for (var i = 0; i < tiles.length; i++) ...[
-            if (i > 0) AppSpacing.hGapMd,
-            Expanded(child: tiles[i]),
+      child: Obx(() {
+        String amount(double value) => controller.balancesHidden.value
+            ? DashboardController.maskedAmount
+            : Money.compact(value);
+
+        return Row(
+          children: [
+            Expanded(
+              child: StatTile(
+                label: positive ? 'Saved' : 'Overspent',
+                icon: Icons.savings_outlined,
+                value: amount(totals.netSavings.abs()),
+                valueColor: positive
+                    ? context.incomeColor
+                    : context.expenseColor,
+                footnote:
+                    '${totals.savingsRate.toStringAsFixed(0)}% of income kept',
+              ),
+            ),
+            AppSpacing.hGapMd,
+            Expanded(
+              child: StatTile(
+                label: 'Spent today',
+                icon: Icons.today_outlined,
+                value: amount(summary.todaySpend),
+                footnote: summary.highestCategory == null
+                    ? null
+                    : 'Top: ${summary.highestCategory!.categoryName}',
+              ),
+            ),
           ],
-        ],
-      ),
+        );
+      }),
     );
   }
 }

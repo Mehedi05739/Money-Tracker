@@ -24,6 +24,7 @@ class SettingKeys {
   static const String defaultAccountId = 'default_account_id';
   static const String lastRecurringRun = 'last_recurring_run';
   static const String onboardingComplete = 'onboarding_complete';
+  static const String balancesHidden = 'balances_hidden';
 }
 
 /// Currencies offered in settings. Symbol is what every amount renders with.

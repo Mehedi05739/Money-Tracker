@@ -22,6 +22,12 @@ abstract class AnalyticsRepository {
   /// One point per calendar month in [range].
   Future<Result<List<TrendPoint>>> getMonthlyTrend(DateRange range);
 
-  /// Everything the dashboard needs, batched to avoid a query per card.
-  Future<Result<DashboardSummary>> getDashboardSummary(DateRange range);
+  /// Everything the dashboard needs.
+  ///
+  /// Pass [accountId] to scope every figure to one account; `null` means all
+  /// accounts.
+  Future<Result<DashboardSummary>> getDashboardSummary(
+    DateRange range, {
+    int? accountId,
+  });
 }

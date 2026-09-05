@@ -25,6 +25,10 @@ class SettingsController extends GetxController {
   final RxnInt defaultAccountId = RxnInt();
   final RxBool isSaving = false.obs;
 
+  /// Whether balances are masked on screen. Persisted so the dashboard does
+  /// not reveal figures again on the next launch.
+  final RxBool balancesHidden = false.obs;
+
   /// Accounts offered when choosing a default. Loaded on demand rather than
   /// held for the life of the app — settings is a rarely visited screen.
   final RxList<Account> accounts = <Account>[].obs;
@@ -43,6 +47,7 @@ class SettingsController extends GetxController {
         defaultAccountId.value = int.tryParse(
           values[SettingKeys.defaultAccountId] ?? '',
         );
+        balancesHidden.value = values[SettingKeys.balancesHidden] == 'true';
         _currency.useSymbol(currency.value.symbol);
         return null;
       },
@@ -90,6 +95,11 @@ class SettingsController extends GetxController {
   Account? get defaultAccount => accounts.firstWhereOrNull(
     (account) => account.id == defaultAccountId.value,
   );
+
+  Future<void> setBalancesHidden(bool hidden) async {
+    balancesHidden.value = hidden;
+    await _persist(SettingKeys.balancesHidden, '$hidden');
+  }
 
   Future<void> setDefaultAccount(int? accountId) async {
     defaultAccountId.value = accountId;

@@ -6,6 +6,8 @@ import '../../domain/entities/budget_status.dart';
 import '../../domain/entities/financial_goal.dart';
 import '../../domain/entities/money_transaction.dart';
 import '../../domain/entities/spending_plan_progress.dart';
+import '../../domain/entities/account.dart';
+import '../../domain/repositories/account_repository.dart';
 import '../../domain/repositories/analytics_repository.dart';
 import '../../domain/repositories/budget_repository.dart';
 import '../../domain/repositories/dashboard_repository.dart';
@@ -24,6 +26,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
     required this.budgets,
     required this.plans,
     required this.goals,
+    required this.accountsRepository,
   });
 
   final AnalyticsRepository analytics;
@@ -31,15 +34,25 @@ class DashboardRepositoryImpl implements DashboardRepository {
   final BudgetRepository budgets;
   final SpendingPlanRepository plans;
   final GoalRepository goals;
+  final AccountRepository accountsRepository;
 
   @override
-  Future<Result<DashboardSummary>> getSummary(DateRange range) =>
-      analytics.getDashboardSummary(range);
+  Future<Result<DashboardSummary>> getSummary(
+    DateRange range, {
+    int? accountId,
+  }) => analytics.getDashboardSummary(range, accountId: accountId);
 
   @override
   Future<Result<List<MoneyTransaction>>> getRecent({
     int limit = AppConstants.recentTransactionCount,
-  }) => transactions.getRecent(limit: limit);
+    int? accountId,
+  }) => accountId == null
+      ? transactions.getRecent(limit: limit)
+      : transactions.getByAccount(accountId, limit: limit);
+
+  @override
+  Future<Result<List<Account>>> getAccounts() =>
+      accountsRepository.getAccounts();
 
   @override
   Future<Result<List<BudgetStatus>>> getBudgetStatuses() =>
@@ -56,9 +69,10 @@ class DashboardRepositoryImpl implements DashboardRepository {
   /// Starts every read together and awaits them in order, so a full load costs
   /// one round trip of wall time rather than five.
   @override
-  Future<Result<DashboardData>> load(DateRange range) async {
-    final summaryFuture = getSummary(range);
-    final recentFuture = getRecent();
+  Future<Result<DashboardData>> load(DateRange range, {int? accountId}) async {
+    final summaryFuture = getSummary(range, accountId: accountId);
+    final recentFuture = getRecent(accountId: accountId);
+    final accountsFuture = getAccounts();
     final budgetFuture = getBudgetStatuses();
     final planFuture = getCurrentPlan();
     final goalFuture = getActiveGoals();
@@ -68,6 +82,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
     final budgetResult = await budgetFuture;
     final planResult = await planFuture;
     final goalResult = await goalFuture;
+    final accountsResult = await accountsFuture;
 
     // The summary is the screen. The rest are supporting cards, so a single
     // failing card degrades to empty instead of blanking the dashboard.
@@ -79,6 +94,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
           budgets: budgetResult.dataOrNull ?? const [],
           currentPlan: planResult.dataOrNull,
           goals: goalResult.dataOrNull ?? const [],
+          accounts: accountsResult.dataOrNull ?? const [],
         ),
       ),
       onError: Result<DashboardData>.error,
