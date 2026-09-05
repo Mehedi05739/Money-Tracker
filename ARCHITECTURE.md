@@ -1,6 +1,8 @@
 # Architecture
 
-Clean Architecture + GetX (state management, DI, routing).
+Offline-first personal finance app. **Clean Architecture + GetX** (state, DI,
+routing) with **sqflite** as the only source of truth. No network layer, no
+cloud services — everything lives in a local SQLite database.
 
 ## Dependency rule
 
@@ -8,117 +10,195 @@ Clean Architecture + GetX (state management, DI, routing).
 presentation  ──▶  domain  ◀──  data
 ```
 
-Dependencies point **inward**. `domain/` is pure Dart — no Flutter, no GetX, no
-JSON. Outer layers depend on the interfaces it declares, never the reverse.
+Dependencies point **inward**. `domain/` is pure Dart: no Flutter, no GetX, no
+sqflite. Outer layers depend on the interfaces it declares, never the reverse.
 
 ## Layout
 
 ```
 lib/
-├── main.dart                  entry point: init DI, run app
-├── app.dart                   GetMaterialApp: theme, routes
+├── main.dart               init DI → runApp → catch up recurring transactions
+├── app.dart                GetMaterialApp: theme, routes, text-scale clamp
 ├── di/
-│   └── dependency_injection.dart   app-wide singletons (permanent)
+│   └── dependency_injection.dart   global singletons (database, DAOs, repos)
 ├── routes/
-│   ├── app_routes.dart        route name constants only
-│   └── app_pages.dart         GetPage table: page + binding per route
-├── core/                      shared, feature-agnostic
-│   ├── base/                  BaseController, ViewState
-│   ├── constants/             app constants, storage keys
-│   ├── errors/                exceptions (data) → failures (domain)
-│   ├── network/               ApiClient (GetConnect), endpoints
-│   ├── services/              StorageService abstraction
-│   ├── theme/                 colors, text styles, ThemeData
-│   ├── usecases/              UseCase contracts
-│   ├── utils/                 Result, logger, extensions
-│   └── widgets/               loader, error, empty, StateView
-└── features/<feature>/
-    ├── domain/
-    │   ├── entities/          business objects
-    │   ├── repositories/      abstract contracts
-    │   └── usecases/          one business action each
-    ├── data/
-    │   ├── models/            entity + fromJson/toJson
-    │   ├── datasources/       remote (HTTP) / local (cache)
-    │   └── repositories/      contract impl, exception → failure
-    └── presentation/
-        ├── controllers/       GetxController, calls use cases
-        ├── bindings/          feature DI graph
-        ├── pages/             GetView screens
-        └── widgets/           feature-local widgets
+│   ├── app_routes.dart     route name constants
+│   ├── app_bindings.dart   per-route controller wiring
+│   └── app_pages.dart      GetPage table
+│
+├── core/                   framework-facing, feature-agnostic
+│   ├── base/               BaseController, ViewState
+│   ├── constants/          app constants, setting keys, currencies
+│   ├── database/           schema, versioned migrations, seed data, opener
+│   ├── enums/              transaction/account/budget/recurrence/goal types
+│   ├── errors/             exceptions (data) → failures (domain)
+│   ├── theme/              colours, text styles, ThemeData, icon registry
+│   ├── utils/              Result, dates, ranges, validators, formatters
+│   └── widgets/            cards, charts, pickers, state views
+│
+├── data/                   sqflite implementation
+│   ├── local/daos/         one DAO per aggregate; all SQL lives here
+│   ├── models/             row ⇄ entity mappers
+│   └── repositories/       contract impls; exception → Failure boundary
+│
+├── domain/                 pure business layer
+│   ├── entities/           Account, MoneyTransaction, Budget, Goal, …
+│   ├── repositories/       abstract contracts
+│   └── services/           rules spanning repositories (recurring catch-up)
+│
+└── features/<module>/presentation/
+    ├── controllers/        GetxController; orchestrates repositories
+    ├── bindings/           (see routes/app_bindings.dart)
+    ├── pages/              GetView screens
+    └── widgets/            feature-local widgets
 ```
 
-## How a request flows
+**Modules:** shell · dashboard · transactions · accounts · categories · budgets
+· plans · goals · recurring · reports · more · settings
+
+## Two deliberate deviations from the original boilerplate
+
+1. **`domain/` and `data/` are top-level, not per-feature.** Twelve modules share
+   one bounded context — the dashboard, reports and budgets all read
+   transactions. Feature-scoped domain layers would force cross-feature imports.
+2. **No per-action `UseCase` classes.** Controllers call repositories directly;
+   logic that spans repositories lives in `domain/services/`. Sixty passthrough
+   classes would add indirection without behaviour.
+
+## How data flows
 
 ```
-Page → Controller → UseCase → Repository (contract)
-                                   ↓
-                       RepositoryImpl → RemoteDataSource → ApiClient → HTTP
-                                     ↘ LocalDataSource  → StorageService
+Page → Controller → Repository (contract) → RepositoryImpl → DAO → sqflite
+                          ▲                       │
+                          └───── Result<T> ───────┘
 ```
 
-Errors travel back as values, not exceptions:
+Errors travel as values, never as exceptions crossing a layer:
 
-- Data sources throw `AppException` subtypes.
-- `RepositoryImpl` catches them and calls `mapExceptionToFailure`.
-- Everything above the repository receives `Result<T>` — `Success` or `Error`.
+- DAOs let sqflite throw.
+- `guard()` in `data/repositories/repository_guard.dart` catches everything and
+  maps it to a `Failure` — this is the only place `DatabaseException` is handled.
+- Everything above receives `Result<T>`: `Success` or `Failed`.
 
-## Error handling
+> `Failed` is named that way deliberately: an `Error` variant would collide with
+> `dart:core.Error`, so a `case Error(...)` in a file missing the import would
+> silently match the wrong type.
 
-`Result<T>` (`core/utils/result.dart`) is a sealed success-or-failure type, so no
-`dartz` dependency is needed:
+## Database
 
-```dart
-result.fold(
-  onSuccess: (data) => ...,
-  onError: (failure) => ...,
-);
-```
+Schema version and migrations: `core/database/migrations.dart`. Every version is
+one entry in `kMigrations`; `applyMigrations` replays only what an install is
+missing. **Never edit a shipped migration — append a new one and bump
+`kDatabaseVersion`.**
 
-## Screen state
+Tables: `accounts`, `categories`, `transactions`, `budgets`, `spending_plans`,
+`spending_plan_items`, `financial_goals`, `goal_contributions`,
+`recurring_transactions`, `app_settings`.
 
-Controllers extend `BaseController`, which exposes one observable `ViewState`
-(`Idle | Loading | Loaded | Empty | Error`) instead of scattered boolean flags.
-`execute()` runs a use case and moves that state automatically:
+**Constraints do real work.** `CHECK (amount > 0)`, `CHECK (type <> 'transfer'
+OR to_account_id IS NOT NULL)`, unique category names per type, and
+`ON DELETE CASCADE` from accounts to transactions are enforced by SQLite, not
+just by Dart. Foreign keys are enabled per connection in `onConfigure` — SQLite
+has them off by default.
 
-```dart
-await execute(
-  () => _getTransactions(const GetTransactionsParams()),
-  onSuccess: transactions.assignAll,
-);
-```
+**Dates** are stored as ISO-8601 local strings without a timezone suffix, so
+lexicographic ordering equals chronological ordering and a day can be extracted
+with `substr(column, 1, 10)`.
 
-`StateView` renders the matching widget, so pages only describe the loaded case.
+### Integrity invariants
 
-## Dependency injection
+- **Account balances** are maintained incrementally inside the same SQL
+  transaction as the row that changes them. An update reverses the stored row's
+  effect before applying the new one, so changing an amount, account or type can
+  never leave a balance stale. `AccountDao.recalculateAll()` rebuilds every
+  balance from the ledger and is verified by test to agree with the incremental
+  path.
+- **Goal totals** are recomputed from the contribution ledger on every write, so
+  `current_amount` cannot drift from its history.
+- **Recurring catch-up** posts all missed occurrences and advances the schedule
+  cursor in one transaction — a crash mid-way cannot double-post on next launch.
+  Capped at `RecurringDao.maxOccurrencesPerRun`.
 
-- **Global** (`DependencyInjection.init()`): `StorageService`, `ApiClient` —
-  `permanent: true`, created before `runApp`.
-- **Per feature** (`Bindings` on each `GetPage`): data sources → repository →
-  use cases → controller, all `lazyPut` so they are built on first use and
-  disposed when the route is popped.
+## Keeping screens in sync
 
-## Adding a feature
+The shell keeps tab bodies alive, so a transaction added from the floating
+action button would otherwise leave the dashboard, ledger and reports showing
+stale figures. `core/events/app_events.dart` broadcasts typed `DataChange`
+events; controllers subscribe to the kinds they care about and reload
+themselves. Emit after a successful write, and dispose the returned `Worker` in
+`onClose`.
 
-1. `features/<name>/domain/entities/<name>_entity.dart`
-2. `features/<name>/domain/repositories/<name>_repository.dart` (abstract)
-3. `features/<name>/domain/usecases/<action>.dart`
-4. `features/<name>/data/models/<name>_model.dart` (`fromJson` / `toJson`)
-5. `features/<name>/data/datasources/` remote + local
-6. `features/<name>/data/repositories/<name>_repository_impl.dart`
-7. `features/<name>/presentation/` controller, binding, page
-8. Register the route in `routes/app_routes.dart` and `routes/app_pages.dart`
+## Two GetX pitfalls this codebase works around
 
-## Placeholders to replace
+1. **`Get.back()` silently does nothing while a snackbar is open.** Its first
+   statement is `if (isSnackbarOpen && !closeOverlays) { closeCurrentSnackbar();
+   return; }` — so a form that shows "Saved" and then navigates back would
+   dismiss its own snackbar and never pop, stranding the user on a form whose
+   data was already written. Pops go through `Navigator.pop` instead; see
+   `core/utils/app_navigation.dart`. After an `await`, capture the navigator
+   before the gap.
+2. **`Get` extends `BuildContext` with `theme`, `textTheme` and `isDarkMode`.**
+   Redefining those in an app-level extension makes every call site ambiguous,
+   so `core/utils/extensions.dart` only adds names GetX does not already
+   provide.
 
-| What | Where | Replace with |
-|---|---|---|
-| In-memory storage | `core/services/storage_service.dart` | `get_storage` / `shared_preferences` impl |
-| Fake API | `features/transaction/data/datasources/fake_transaction_remote_datasource.dart` | bind `TransactionRemoteDataSourceImpl` in `TransactionBinding` |
-| Base URL | `core/network/api_endpoints.dart` | your API host |
+## Performance
+
+- Reports and dashboards are indexed `GROUP BY` aggregates. No screen loads
+  transaction rows into Dart to sum them.
+- Budget statuses use one correlated-subquery pass, not a query per budget.
+- The ledger paginates in SQL (`LIMIT`/`OFFSET`) and appends pages; it never
+  refetches rows already in memory.
+- The dashboard starts its reads concurrently and awaits them in order, so it
+  costs one round trip of wall time rather than five.
+- List rows carry their category and account names from a join — no N+1 lookups.
+- Tab bodies are built lazily and kept alive by an `IndexedStack`, so switching
+  tabs re-runs no queries.
+- `Obx` scopes are kept narrow: each observable is read inside the smallest
+  widget that needs it.
+
+## Security & privacy
+
+- All data stays on device. There is no network layer in the app.
+- `AppLogger` is stripped in release builds; the repository guard logs error
+  *types*, never row values.
+- Snackbars and logs never include amounts or account names.
+- Every write is parameterised — user input is bound, never interpolated into
+  SQL. `LIKE` searches escape `%` and `_` with an explicit `ESCAPE` clause.
+- `app_settings` holds preferences only. No credentials are ever stored.
 
 ## Testing
 
-The domain layer has no framework dependencies, so use cases are tested with a
-hand-written fake repository — no mocking package, no `WidgetTester`. See
-`test/widget_test.dart`.
+`test/` runs against the real schema on an in-memory database
+(`sqflite_common_ffi`), so migrations, constraints and SQL are all exercised:
+
+| File | Covers |
+|---|---|
+| `database/schema_test.dart` | tables, FK enforcement, CHECK constraints, cascades, seed |
+| `data/transaction_dao_test.dart` | balance maintenance across insert/update/delete/transfer, LIKE escaping |
+| `data/transaction_repository_test.dart` | validation rules, cent rounding, pagination |
+| `data/analytics_dao_test.dart` | totals, savings rate, transfer exclusion, breakdowns, trends |
+| `data/budget_dao_test.dart` | spend pairing, overall budgets, exceeded/at-risk, overlap detection |
+| `data/goal_dao_test.dart` | contribution roll-up, withdrawals, achieved transitions |
+| `data/spending_plan_dao_test.dart` | planned vs actual, unallocated, over-allocation |
+| `domain/recurring_service_test.dart` | catch-up posting, idempotency, end dates, safety cap |
+
+Run with `flutter test`.
+
+## Adding a feature
+
+1. `domain/entities/<name>.dart`
+2. `domain/repositories/<name>_repository.dart` (abstract)
+3. `data/local/daos/<name>_dao.dart` — all SQL
+4. `data/models/<name>_mapper.dart` — row ⇄ entity
+5. `data/repositories/<name>_repository_impl.dart` — wrap DAO calls in `guard()`
+6. `features/<name>/presentation/` — controller extending `BaseController`, page
+7. Register the repository in `di/dependency_injection.dart`, the controller in
+   `routes/app_bindings.dart`, and the route in `app_routes.dart` + `app_pages.dart`
+
+## Adding a database column
+
+1. Append a `Migration` to `kMigrations` with `ALTER TABLE …`
+2. Bump `kDatabaseVersion`
+3. Add the column constant to `core/database/db_tables.dart`
+4. Read/write it in the mapper

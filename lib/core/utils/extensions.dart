@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../constants/app_constants.dart';
+import 'date_utils.dart';
+import 'formatters.dart';
 
 /// Only additions GetX does not already provide — `context.theme`,
 /// `context.textTheme` and `context.isDarkMode` come from `package:get`.
@@ -13,33 +14,22 @@ extension BuildContextX on BuildContext {
 
 extension NumX on num {
   /// `1234.5` → `$1,234.50`
-  String toCurrency({String symbol = AppConstants.defaultCurrencySymbol}) {
-    final negative = this < 0;
-    final parts = abs().toStringAsFixed(2).split('.');
-    final grouped = parts.first.replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+$)'),
-      (match) => '${match[1]},',
-    );
-    return '${negative ? '-' : ''}$symbol$grouped.${parts.last}';
-  }
+  String get asMoney => Money.format(this);
+
+  /// Same, but prefixes `+` for positive values.
+  String get asSignedMoney => Money.format(this, showSign: true);
+
+  /// Share of [total] as a 0–100 value, safe when [total] is zero.
+  double percentOf(num total) => total == 0 ? 0 : (this / total) * 100;
 }
 
 extension DateTimeX on DateTime {
-  static const List<String> _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-
-  /// `2026-09-05` → `05 Sep 2026`
-  String get formatted =>
-      '${day.toString().padLeft(2, '0')} ${_months[month - 1]} $year';
-
-  bool get isToday {
-    final now = DateTime.now();
-    return now.year == year && now.month == month && now.day == day;
-  }
-
-  DateTime get startOfDay => DateTime(year, month, day);
+  String get formatted => AppDate.formatDate(this);
+  String get formattedWithTime => AppDate.formatDateTime(this);
+  String get relativeDay => AppDate.formatRelativeDay(this);
+  bool get isToday => AppDate.isToday(this);
+  DateTime get startOfDay => AppDate.startOfDay(this);
+  DateTime get endOfDay => AppDate.endOfDay(this);
 }
 
 extension StringX on String {

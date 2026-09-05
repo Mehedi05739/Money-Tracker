@@ -9,28 +9,28 @@ import '../errors/failures.dart';
 /// ```dart
 /// switch (result) {
 ///   case Success(:final data): ...
-///   case Error(:final failure): ...
+///   case Failed(:final failure): ...
 /// }
 /// ```
 sealed class Result<T> {
   const Result();
 
   const factory Result.success(T data) = Success<T>;
-  const factory Result.error(Failure failure) = Error<T>;
+  const factory Result.error(Failure failure) = Failed<T>;
 
   bool get isSuccess => this is Success<T>;
-  bool get isError => this is Error<T>;
+  bool get isError => this is Failed<T>;
 
   /// The value on success, `null` otherwise.
   T? get dataOrNull => switch (this) {
         Success<T>(:final data) => data,
-        Error<T>() => null,
+        Failed<T>() => null,
       };
 
   /// The failure on error, `null` otherwise.
   Failure? get failureOrNull => switch (this) {
         Success<T>() => null,
-        Error<T>(:final failure) => failure,
+        Failed<T>(:final failure) => failure,
       };
 
   /// Collapses both branches into a single value.
@@ -40,13 +40,13 @@ sealed class Result<T> {
   }) =>
       switch (this) {
         Success<T>(:final data) => onSuccess(data),
-        Error<T>(:final failure) => onError(failure),
+        Failed<T>(:final failure) => onError(failure),
       };
 
   /// Transforms the success value, leaving a failure untouched.
   Result<R> map<R>(R Function(T data) transform) => switch (this) {
         Success<T>(:final data) => Success<R>(transform(data)),
-        Error<T>(:final failure) => Error<R>(failure),
+        Failed<T>(:final failure) => Failed<R>(failure),
       };
 }
 
@@ -55,7 +55,10 @@ final class Success<T> extends Result<T> {
   final T data;
 }
 
-final class Error<T> extends Result<T> {
-  const Error(this.failure);
+/// Named `Failed` rather than `Error` so it never collides with
+/// `dart:core.Error` — a bare `case Error(...)` in a file that forgot to import
+/// this library would silently match the wrong type.
+final class Failed<T> extends Result<T> {
+  const Failed(this.failure);
   final Failure failure;
 }
