@@ -17,6 +17,7 @@ import '../../../../core/widgets/section_header.dart';
 import '../../../../core/widgets/stat_tile.dart';
 import '../../../../domain/entities/analytics.dart';
 import '../../../../routes/app_routes.dart';
+import '../../../shell/presentation/controllers/shell_controller.dart';
 import '../../../transactions/presentation/pages/transaction_form_page.dart';
 import '../../../transactions/presentation/widgets/quick_add_sheet.dart';
 import '../../../transactions/presentation/widgets/transaction_tile.dart';
@@ -113,7 +114,8 @@ class _DashboardBody extends StatelessWidget {
 
         // 3 — budget status.
         Obx(() {
-          if (controller.budgets.isEmpty) return const SizedBox.shrink();
+          final overview = controller.budgetOverview;
+          if (overview.isEmpty) return const SizedBox.shrink();
           return Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.base,
@@ -122,7 +124,7 @@ class _DashboardBody extends StatelessWidget {
               0,
             ),
             child: BudgetSummaryCard(
-              statuses: controller.budgets,
+              overview: overview,
               onTap: () => Get.toNamed(AppRoutes.budgets),
             ),
           );
@@ -155,9 +157,10 @@ class _DashboardBody extends StatelessWidget {
         SectionHeader(
           title: 'Recent activity',
           actionLabel: 'See all',
-          onAction: () => Get.find<DashboardController>().hasData
-              ? Get.toNamed(AppRoutes.shell)
-              : null,
+          // Switch tabs rather than navigate: pushing the shell route from
+          // inside the shell stacked a second copy of the whole app on top.
+          onAction: () =>
+              Get.find<ShellController>().changeTab(ShellTabs.transactions),
         ),
         Obx(() {
           final recent = controller.recent;

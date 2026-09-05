@@ -48,3 +48,75 @@ class BudgetStatus {
     return 'On track';
   }
 }
+
+/// Roll-up across several budgets.
+///
+/// This lives in the domain rather than in the card that draws it: summing
+/// limits, summing spend and deciding what counts as "at risk" are money rules,
+/// and a widget that recomputes them on every rebuild is both wasteful and a
+/// second place for those rules to drift.
+class BudgetOverview {
+  const BudgetOverview({
+    required this.limit,
+    required this.spent,
+    required this.alerts,
+    required this.exceededCount,
+    required this.budgetCount,
+  });
+
+  const BudgetOverview.empty()
+    : limit = 0,
+      spent = 0,
+      alerts = const [],
+      exceededCount = 0,
+      budgetCount = 0;
+
+  factory BudgetOverview.from(List<BudgetStatus> statuses) {
+    if (statuses.isEmpty) return const BudgetOverview.empty();
+
+    var limit = 0.0;
+    var spent = 0.0;
+    var exceeded = 0;
+    final alerts = <BudgetStatus>[];
+
+    for (final status in statuses) {
+      limit += status.limit;
+      spent += status.spent;
+      if (status.isExceeded) exceeded++;
+      if (status.isExceeded || status.isAtRisk) alerts.add(status);
+    }
+
+    // Worst first: the budget furthest past its limit is the one to act on.
+    alerts.sort((a, b) => b.usagePercent.compareTo(a.usagePercent));
+
+    return BudgetOverview(
+      limit: limit,
+      spent: spent,
+      alerts: alerts,
+      exceededCount: exceeded,
+      budgetCount: statuses.length,
+    );
+  }
+
+  final double limit;
+  final double spent;
+
+  /// Budgets over or approaching their limit, worst first.
+  final List<BudgetStatus> alerts;
+  final int exceededCount;
+  final int budgetCount;
+
+  bool get isEmpty => budgetCount == 0;
+  double get remaining => limit - spent;
+  double get usageFraction => limit <= 0 ? 0 : (spent / limit).clamp(0.0, 1.0);
+  double get usagePercent => limit <= 0 ? 0 : (spent / limit) * 100;
+
+  bool get isExceeded => spent > limit;
+  bool get isAtRisk => !isExceeded && usagePercent >= 80;
+
+  String get headline {
+    if (exceededCount > 0) return '$exceededCount over limit';
+    if (alerts.isNotEmpty) return '${alerts.length} near limit';
+    return 'On track';
+  }
+}

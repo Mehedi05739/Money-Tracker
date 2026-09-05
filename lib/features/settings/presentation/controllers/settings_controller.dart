@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/constants/app_constants.dart';
-import '../../../../core/utils/formatters.dart';
+import '../../../../core/services/currency_formatter.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/utils/result.dart';
+import '../../../../domain/entities/account.dart';
 import '../../../../domain/repositories/account_repository.dart';
 import '../../../../domain/repositories/settings_repository.dart';
 
@@ -13,15 +14,20 @@ import '../../../../domain/repositories/settings_repository.dart';
 /// Registered permanently and loaded before the first frame so the app never
 /// flashes the wrong theme or currency symbol.
 class SettingsController extends GetxController {
-  SettingsController(this._repository, this._accountRepository);
+  SettingsController(this._repository, this._accountRepository, this._currency);
 
   final SettingsRepository _repository;
   final AccountRepository _accountRepository;
+  final CurrencyFormatter _currency;
 
   final Rx<ThemeMode> themeMode = ThemeMode.system.obs;
   final Rx<SupportedCurrency> currency = SupportedCurrency.all.first.obs;
   final RxnInt defaultAccountId = RxnInt();
   final RxBool isSaving = false.obs;
+
+  /// Accounts offered when choosing a default. Loaded on demand rather than
+  /// held for the life of the app — settings is a rarely visited screen.
+  final RxList<Account> accounts = <Account>[].obs;
 
   /// Reads stored preferences and applies them to the formatter.
   /// Failures fall back to defaults rather than blocking startup.
@@ -37,7 +43,7 @@ class SettingsController extends GetxController {
         defaultAccountId.value = int.tryParse(
           values[SettingKeys.defaultAccountId] ?? '',
         );
-        Money.configure(currency.value.symbol);
+        _currency.useSymbol(currency.value.symbol);
         return null;
       },
       onError: (failure) {
@@ -45,7 +51,7 @@ class SettingsController extends GetxController {
           'Falling back to default settings: ${failure.runtimeType}',
           name: 'SETTINGS',
         );
-        Money.configure(currency.value.symbol);
+        _currency.useSymbol(currency.value.symbol);
         return null;
       },
     );
@@ -61,7 +67,7 @@ class SettingsController extends GetxController {
   Future<void> setCurrency(SupportedCurrency value) async {
     if (value.code == currency.value.code) return;
     currency.value = value;
-    Money.configure(value.symbol);
+    _currency.useSymbol(value.symbol);
 
     await _persist(SettingKeys.currencyCode, value.code);
     await _persist(SettingKeys.currencySymbol, value.symbol);
@@ -70,6 +76,20 @@ class SettingsController extends GetxController {
     // visible figure must repaint.
     Get.forceAppUpdate();
   }
+
+  /// Loads the accounts the default-account picker offers.
+  ///
+  /// The page used to call the repository itself, which put a database read
+  /// inside a widget and skipped this layer entirely.
+  Future<List<Account>> loadAccounts() async {
+    final result = await _accountRepository.getAccounts();
+    accounts.assignAll(result.dataOrNull ?? const []);
+    return accounts;
+  }
+
+  Account? get defaultAccount => accounts.firstWhereOrNull(
+    (account) => account.id == defaultAccountId.value,
+  );
 
   Future<void> setDefaultAccount(int? accountId) async {
     defaultAccountId.value = accountId;

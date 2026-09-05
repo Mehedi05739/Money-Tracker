@@ -4,6 +4,17 @@ import 'package:get/get.dart';
 ///
 /// Tab bodies are kept alive by an [IndexedStack], so switching tabs does not
 /// re-run their controllers' queries.
+/// Tab indices, so callers switching tabs do not pass a bare integer.
+class ShellTabs {
+  const ShellTabs._();
+
+  static const int dashboard = 0;
+  static const int transactions = 1;
+  static const int plans = 2;
+  static const int reports = 3;
+  static const int more = 4;
+}
+
 class ShellController extends GetxController {
   final RxInt currentIndex = 0.obs;
 

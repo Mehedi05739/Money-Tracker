@@ -34,7 +34,16 @@ class AppEvents extends GetxService {
   ///
   /// Callers must dispose the returned worker in `onClose`.
   Worker listen(List<DataChange> kinds, VoidCallback action) =>
-      ever<DataChange?>(_lastChange, (change) {
-        if (change != null && kinds.contains(change)) action();
-      });
+      onChange(kinds, (_) => action());
+
+  /// Like [listen], but hands the change to [action].
+  ///
+  /// Screens that show several kinds of data use this to reload only the part
+  /// that actually went stale, instead of re-running every query they own.
+  Worker onChange(
+    List<DataChange> kinds,
+    void Function(DataChange change) action,
+  ) => ever<DataChange?>(_lastChange, (change) {
+    if (change != null && kinds.contains(change)) action(change);
+  });
 }

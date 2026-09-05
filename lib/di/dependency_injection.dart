@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../core/constants/app_constants.dart';
 import '../core/database/app_database.dart';
 import '../core/events/app_events.dart';
+import '../core/services/currency_formatter.dart';
 import '../data/local/daos/account_dao.dart';
 import '../data/local/daos/analytics_dao.dart';
 import '../data/local/daos/budget_dao.dart';
@@ -16,6 +17,7 @@ import '../data/repositories/account_repository_impl.dart';
 import '../data/repositories/analytics_repository_impl.dart';
 import '../data/repositories/budget_repository_impl.dart';
 import '../data/repositories/category_repository_impl.dart';
+import '../data/repositories/dashboard_repository_impl.dart';
 import '../data/repositories/goal_repository_impl.dart';
 import '../data/repositories/recurring_repository_impl.dart';
 import '../data/repositories/settings_repository_impl.dart';
@@ -25,6 +27,7 @@ import '../domain/repositories/account_repository.dart';
 import '../domain/repositories/analytics_repository.dart';
 import '../domain/repositories/budget_repository.dart';
 import '../domain/repositories/category_repository.dart';
+import '../domain/repositories/dashboard_repository.dart';
 import '../domain/repositories/goal_repository.dart';
 import '../domain/repositories/recurring_repository.dart';
 import '../domain/repositories/settings_repository.dart';
@@ -106,11 +109,25 @@ class DependencyInjection {
       ..put<SettingsRepository>(
         SettingsRepositoryImpl(Get.find<SettingsDao>()),
         permanent: true,
+      )
+      // Composes the feature repositories the dashboard reads from, so its
+      // controller depends on one thing instead of five.
+      ..put<DashboardRepository>(
+        DashboardRepositoryImpl(
+          analytics: Get.find<AnalyticsRepository>(),
+          transactions: Get.find<TransactionRepository>(),
+          budgets: Get.find<BudgetRepository>(),
+          plans: Get.find<SpendingPlanRepository>(),
+          goals: Get.find<GoalRepository>(),
+        ),
+        permanent: true,
       );
   }
 
   static Future<void> _registerServices() async {
-    Get.put(AppEvents(), permanent: true);
+    Get
+      ..put(AppEvents(), permanent: true)
+      ..put(CurrencyFormatter(), permanent: true);
 
     Get.put(RecurringService(Get.find<RecurringRepository>()), permanent: true);
 
@@ -120,6 +137,7 @@ class DependencyInjection {
       SettingsController(
         Get.find<SettingsRepository>(),
         Get.find<AccountRepository>(),
+        Get.find<CurrencyFormatter>(),
       ),
       permanent: true,
     );

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:money_tracker/core/enums/transaction_type.dart';
 import 'package:money_tracker/core/events/app_events.dart';
+import 'package:money_tracker/core/services/currency_formatter.dart';
 import 'package:money_tracker/data/local/daos/account_dao.dart';
 import 'package:money_tracker/data/local/daos/category_dao.dart';
 import 'package:money_tracker/data/local/daos/settings_dao.dart';
@@ -30,6 +31,7 @@ void main() {
     final settings = SettingsController(
       SettingsRepositoryImpl(SettingsDao(database.db)),
       accounts,
+      CurrencyFormatter(),
     );
     await settings.load();
 

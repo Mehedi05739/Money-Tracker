@@ -2,17 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/enums/transaction_type.dart';
-import '../../../../core/events/app_events.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/amount_keypad.dart';
 import '../../../../core/widgets/form_fields.dart';
-import '../../../../domain/repositories/account_repository.dart';
-import '../../../../domain/repositories/category_repository.dart';
-import '../../../../domain/repositories/transaction_repository.dart';
-import '../../../settings/presentation/controllers/settings_controller.dart';
+import '../bindings/transaction_form_binding.dart';
 import '../controllers/transaction_form_controller.dart';
 import 'category_grid.dart';
 import 'picker_sheets.dart';
@@ -38,17 +34,10 @@ class QuickAddSheet extends StatelessWidget {
     final context = Get.context;
     if (context == null) return false;
 
-    final controller = Get.put(
-      TransactionFormController(
-        Get.find<TransactionRepository>(),
-        Get.find<AccountRepository>(),
-        Get.find<CategoryRepository>(),
-        Get.find<SettingsController>(),
-        Get.find<AppEvents>(),
-        seed: TransactionFormArgs(type: type),
-      ),
-      tag: _tag,
-    );
+    // DI lives in the binding, not here: a widget that resolves five
+    // dependencies is wiring, and wiring belongs with the feature's other
+    // wiring where it can change in one place.
+    final controller = putQuickAddController(tag: _tag, type: type);
 
     final saved = await showModalBottomSheet<bool>(
       context: context,

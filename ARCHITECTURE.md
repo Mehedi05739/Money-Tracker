@@ -150,6 +150,40 @@ describes exactly the rows the list is showing.
   cursor in one transaction — a crash mid-way cannot double-post on next launch.
   Capped at `RecurringDao.maxOccurrencesPerRun`.
 
+## GetX conventions
+
+```
+UI (GetView / Obx)
+  ↓  reads state, calls methods
+GetxController          — state and orchestration, no SQL
+  ↓
+Repository (contract)   — domain-owned interface
+  ↓
+RepositoryImpl → DAO    — the only layer that writes SQL
+  ↓
+AppDatabase → SQLite
+```
+
+- **Widgets never touch repositories.** Anything a screen needs goes through
+  its controller; anything a sheet needs to construct goes through a binding.
+- **Controllers never see the data layer.** They import `domain/`, never
+  `data/` or `package:sqflite`.
+- **`Rx` only where the UI must react.** Everything derived — budget roll-ups,
+  savings rate, category shares — is a plain getter or a domain value object,
+  not another observable to keep in sync.
+- **`Obx` wraps the smallest widget that reads an observable.** A loading gate
+  swaps a `const` body rather than wrapping the whole form, so a rebuild is one
+  widget swap instead of a tree walk.
+- **Bindings live with their feature** in `presentation/bindings/`, registered
+  on the `GetPage`. `Get.lazyPut` keeps a controller unbuilt until its page
+  asks; the shell's tab controllers add `fenix: true` so one disposed during a
+  deep back-navigation can come back.
+- **Global singletons** (database, DAOs, repositories, `AppEvents`,
+  `CurrencyFormatter`, `SettingsController`) are `permanent: true` in
+  `di/dependency_injection.dart`. Mutable statics are not used for application
+  state — the currency symbol lives in an injected `CurrencyFormatter`, not a
+  global, so it has one source of truth and resets with `Get.reset()`.
+
 ## Keeping screens in sync
 
 The shell keeps tab bodies alive, so a transaction added from the floating
@@ -158,6 +192,13 @@ stale figures. `core/events/app_events.dart` broadcasts typed `DataChange`
 events; controllers subscribe to the kinds they care about and reload
 themselves. Emit after a successful write, and dispose the returned `Worker` in
 `onClose`.
+
+Listeners reload **only what a change invalidates**. `DashboardController`
+maps each `DataChange` to the sections it affects: a transaction refreshes
+totals, the recent list, budget spend and plan progress, but not goals; a goal
+refreshes goals alone; a recurring-schedule edit refreshes nothing, because
+posting one emits `DataChange.transactions` instead. Reloading every section on
+every event meant saving a goal re-queried the ledger.
 
 ## Two GetX pitfalls this codebase works around
 

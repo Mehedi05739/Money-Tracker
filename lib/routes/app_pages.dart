@@ -16,7 +16,14 @@ import '../features/recurring/presentation/pages/recurring_page.dart';
 import '../features/settings/presentation/pages/settings_page.dart';
 import '../features/shell/presentation/pages/shell_page.dart';
 import '../features/transactions/presentation/pages/transaction_form_page.dart';
-import 'app_bindings.dart';
+import '../features/accounts/presentation/bindings/accounts_binding.dart';
+import '../features/budgets/presentation/bindings/budgets_binding.dart';
+import '../features/categories/presentation/bindings/categories_binding.dart';
+import '../features/goals/presentation/bindings/goals_binding.dart';
+import '../features/plans/presentation/bindings/plans_binding.dart';
+import '../features/recurring/presentation/bindings/recurring_binding.dart';
+import '../features/shell/presentation/bindings/shell_binding.dart';
+import '../features/transactions/presentation/bindings/transaction_form_binding.dart';
 import 'app_routes.dart';
 
 /// Route table. Each page declares its binding so a feature's controllers are

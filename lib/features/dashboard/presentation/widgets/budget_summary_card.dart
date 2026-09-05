@@ -16,32 +16,22 @@ import '../../../../domain/entities/budget_status.dart';
 class BudgetSummaryCard extends StatelessWidget {
   const BudgetSummaryCard({
     super.key,
-    required this.statuses,
+    required this.overview,
     this.onTap,
     this.maxAlerts = 2,
   });
 
-  final List<BudgetStatus> statuses;
+  /// Precomputed by the controller — this widget only draws it.
+  final BudgetOverview overview;
   final VoidCallback? onTap;
   final int maxAlerts;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    final limit = statuses.fold<double>(0, (sum, s) => sum + s.limit);
-    final spent = statuses.fold<double>(0, (sum, s) => sum + s.spent);
-    final alerts =
-        statuses
-            .where((status) => status.isExceeded || status.isAtRisk)
-            .toList()
-          ..sort((a, b) => b.usagePercent.compareTo(a.usagePercent));
-
-    final exceeded = statuses.where((s) => s.isExceeded).length;
-    final overall = limit <= 0 ? 0.0 : spent / limit;
-    final statusColor = spent > limit
+    final statusColor = overview.isExceeded
         ? context.expenseColor
-        : overall >= 0.8
+        : overview.isAtRisk
         ? context.warningColor
         : theme.colorScheme.primary;
 
@@ -54,14 +44,7 @@ class BudgetSummaryCard extends StatelessWidget {
             children: [
               Text('Budgets', style: theme.textTheme.titleMedium),
               const Spacer(),
-              _StatusPill(
-                label: exceeded > 0
-                    ? '$exceeded over limit'
-                    : alerts.isNotEmpty
-                    ? '${alerts.length} near limit'
-                    : 'On track',
-                color: statusColor,
-              ),
+              _StatusPill(label: overview.headline, color: statusColor),
             ],
           ),
           AppSpacing.gapMd,
@@ -70,12 +53,12 @@ class BudgetSummaryCard extends StatelessWidget {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                Money.format(spent),
+                Money.format(overview.spent),
                 style: theme.textTheme.titleLarge?.copyWith(color: statusColor),
               ),
               AppSpacing.hGapXs,
               Text(
-                'of ${Money.format(limit)}',
+                'of ${Money.format(overview.limit)}',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -83,10 +66,14 @@ class BudgetSummaryCard extends StatelessWidget {
             ],
           ),
           AppSpacing.gapSm,
-          AppProgressBar(value: overall, exceeded: spent > limit, height: 6),
-          if (alerts.isNotEmpty) ...[
+          AppProgressBar(
+            value: overview.usageFraction,
+            exceeded: overview.isExceeded,
+            height: 6,
+          ),
+          if (overview.alerts.isNotEmpty) ...[
             AppSpacing.gapMd,
-            for (final status in alerts.take(maxAlerts)) ...[
+            for (final status in overview.alerts.take(maxAlerts)) ...[
               _AlertRow(status: status),
               AppSpacing.gapSm,
             ],

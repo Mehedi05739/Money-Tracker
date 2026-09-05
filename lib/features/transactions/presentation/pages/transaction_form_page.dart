@@ -45,18 +45,21 @@ class TransactionFormPage extends GetView<TransactionFormController> {
           ),
         ),
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) return const AppLoader();
-        return _FormBody(controller: controller);
-      }),
+      body: Obx(
+        () =>
+            controller.isLoading.value ? const AppLoader() : const _FormBody(),
+      ),
     );
   }
 }
 
-class _FormBody extends StatelessWidget {
-  const _FormBody({required this.controller});
-
-  final TransactionFormController controller;
+/// The form itself.
+///
+/// A `GetView` with a const constructor, so the loading gate's `Obx` swaps a
+/// canonical widget instead of rebuilding every field — each field already
+/// owns its own reactive scope.
+class _FormBody extends GetView<TransactionFormController> {
+  const _FormBody();
 
   @override
   Widget build(BuildContext context) {

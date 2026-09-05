@@ -6,8 +6,6 @@ import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/section_header.dart';
-import '../../../../domain/entities/account.dart';
-import '../../../../domain/repositories/account_repository.dart';
 import '../../../transactions/presentation/widgets/picker_sheets.dart';
 import '../controllers/settings_controller.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -231,8 +229,7 @@ class SettingsPage extends GetView<SettingsController> {
   }
 
   Future<void> _pickDefaultAccount() async {
-    final result = await Get.find<AccountRepository>().getAccounts();
-    final accounts = result.dataOrNull ?? const <Account>[];
+    final accounts = await controller.loadAccounts();
 
     if (accounts.isEmpty) {
       AppSnackbar.info('Add an account first');
@@ -241,9 +238,7 @@ class SettingsPage extends GetView<SettingsController> {
 
     final picked = await PickerSheets.account(
       accounts,
-      selected: accounts.firstWhereOrNull(
-        (account) => account.id == controller.defaultAccountId.value,
-      ),
+      selected: controller.defaultAccount,
       title: 'Default account',
     );
     if (picked != null) await controller.setDefaultAccount(picked.id);
