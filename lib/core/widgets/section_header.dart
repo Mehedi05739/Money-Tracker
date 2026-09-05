@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_spacing.dart';
 
 /// Title row above a group of content, with an optional trailing action.
 class SectionHeader extends StatelessWidget {
@@ -8,7 +9,12 @@ class SectionHeader extends StatelessWidget {
     this.subtitle,
     this.actionLabel,
     this.onAction,
-    this.padding = const EdgeInsets.fromLTRB(16, 20, 8, 8),
+    this.padding = const EdgeInsets.fromLTRB(
+      AppSpacing.base,
+      AppSpacing.lg,
+      AppSpacing.sm,
+      AppSpacing.sm,
+    ),
   });
 
   final String title;

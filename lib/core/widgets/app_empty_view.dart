@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_spacing.dart';
 
 class AppEmptyView extends StatelessWidget {
   const AppEmptyView({
@@ -20,12 +21,12 @@ class AppEmptyView extends StatelessWidget {
 
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainerHighest
                     .withValues(alpha: 0.6),
@@ -37,10 +38,10 @@ class AppEmptyView extends StatelessWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 20),
+            AppSpacing.gapLg,
             if (title != null) ...[
               Text(title!, style: theme.textTheme.titleLarge),
-              const SizedBox(height: 6),
+              AppSpacing.gapSm,
             ],
             Text(
               message,
@@ -49,7 +50,7 @@ class AppEmptyView extends StatelessWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            if (action != null) ...[const SizedBox(height: 24), action!],
+            if (action != null) ...[AppSpacing.gapXl, action!],
           ],
         ),
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_spacing.dart';
 
 class AppErrorView extends StatelessWidget {
   const AppErrorView({
@@ -18,18 +19,18 @@ class AppErrorView extends StatelessWidget {
 
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 44, color: theme.colorScheme.error),
-            const SizedBox(height: 16),
+            AppSpacing.gapBase,
             Text(
               'Something went wrong',
               style: theme.textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 6),
+            AppSpacing.gapSm,
             Text(
               message,
               textAlign: TextAlign.center,
@@ -38,7 +39,7 @@ class AppErrorView extends StatelessWidget {
               ),
             ),
             if (onRetry != null) ...[
-              const SizedBox(height: 24),
+              AppSpacing.gapXl,
               OutlinedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded, size: 18),

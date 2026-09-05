@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/enums/payment_method.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/category_icons.dart';
 import '../../../../core/utils/app_navigation.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/category_avatar.dart';
 import '../../../../domain/entities/account.dart';
 import '../../../../domain/entities/category.dart';
+import 'category_grid.dart';
 
 /// Bottom-sheet pickers shared by the transaction, budget and recurring forms.
 class PickerSheets {
   const PickerSheets._();
 
+  /// Categories are picked from a visual grid — icon and colour are faster to
+  /// recognise than a column of words.
   static Future<Category?> category(
     List<Category> categories, {
     Category? selected,
@@ -21,20 +25,20 @@ class PickerSheets {
         title: 'Choose a category',
         emptyMessage: 'No categories yet. Add one from More → Categories.',
         itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final item = categories[index];
-          return _Row(
-            leading: CategoryAvatar(
-              icon: item.icon,
-              color: item.color,
-              seed: item.id,
-              size: 40,
-            ),
-            title: item.name,
-            isSelected: item.id == selected?.id,
-            onTap: () => popRoute<Category>(context, item),
-          );
-        },
+        listBuilder: (context) => Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.base,
+            0,
+            AppSpacing.base,
+            AppSpacing.base,
+          ),
+          child: CategoryGrid(
+            categories: categories,
+            selectedId: selected?.id,
+            onSelected: (item) => popRoute<Category>(context, item),
+            physics: const NeverScrollableScrollPhysics(),
+          ),
+        ),
       );
 
   static Future<Account?> account(

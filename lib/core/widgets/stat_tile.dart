@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_card.dart';
+import '../theme/app_spacing.dart';
 
 /// Compact metric card: label, value, and an optional trend note.
 class StatTile extends StatelessWidget {
@@ -29,7 +30,7 @@ class StatTile extends StatelessWidget {
 
     return AppCard(
       onTap: onTap,
-      padding: const EdgeInsets.all(14),
+      padding: AppSpacing.cardCompact,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -38,7 +39,7 @@ class StatTile extends StatelessWidget {
             children: [
               if (icon != null) ...[
                 Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
-                const SizedBox(width: 6),
+                AppSpacing.hGapSm,
               ],
               Expanded(
                 child: Text(
@@ -52,7 +53,7 @@ class StatTile extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          AppSpacing.gapSm,
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -62,7 +63,7 @@ class StatTile extends StatelessWidget {
             ),
           ),
           if (footnote != null) ...[
-            const SizedBox(height: 4),
+            AppSpacing.gapXs,
             Text(
               footnote!,
               style: theme.textTheme.bodySmall?.copyWith(

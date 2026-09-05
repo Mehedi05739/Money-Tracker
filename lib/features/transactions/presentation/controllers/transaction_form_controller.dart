@@ -15,7 +15,29 @@ import '../../../../domain/repositories/category_repository.dart';
 import '../../../../domain/repositories/transaction_repository.dart';
 import '../../../settings/presentation/controllers/settings_controller.dart';
 
-/// Drives the add/edit transaction sheet.
+/// What the form should open with.
+///
+/// The page reads this from route arguments; the quick-add sheet passes it
+/// directly, because a sheet has no route of its own to carry arguments.
+class TransactionFormArgs {
+  const TransactionFormArgs({
+    this.type = TransactionType.expense,
+    this.editing,
+  });
+
+  factory TransactionFormArgs.fromRouteArguments(Object? arguments) =>
+      switch (arguments) {
+        MoneyTransaction transaction =>
+          TransactionFormArgs(type: transaction.type, editing: transaction),
+        TransactionType type => TransactionFormArgs(type: type),
+        _ => const TransactionFormArgs(),
+      };
+
+  final TransactionType type;
+  final MoneyTransaction? editing;
+}
+
+/// Drives the add/edit transaction form.
 ///
 /// Optimised for speed of entry: the amount field is focused on open, the
 /// account is pre-filled from settings, and everything except amount and
@@ -26,14 +48,18 @@ class TransactionFormController extends GetxController {
     this._accounts,
     this._categories,
     this._settings,
-    this._events,
-  );
+    this._events, {
+    this.seed,
+  });
 
   final TransactionRepository _transactions;
   final AccountRepository _accounts;
   final CategoryRepository _categories;
   final SettingsController _settings;
   final AppEvents _events;
+
+  /// Supplied by the sheet; `null` means "read the route arguments".
+  final TransactionFormArgs? seed;
 
   final TextEditingController amountField = TextEditingController();
   final TextEditingController titleField = TextEditingController();
@@ -85,11 +111,14 @@ class TransactionFormController extends GetxController {
     accounts.assignAll((await accountFuture).dataOrNull ?? const []);
     categories.assignAll((await categoryFuture).dataOrNull ?? const []);
 
-    final existing = Get.arguments;
-    if (existing is MoneyTransaction) {
-      _loadForEdit(existing);
+    final args =
+        seed ?? TransactionFormArgs.fromRouteArguments(Get.arguments);
+    final editing = args.editing;
+
+    if (editing != null) {
+      _loadForEdit(editing);
     } else {
-      if (existing is TransactionType) type.value = existing;
+      type.value = args.type;
       _applyDefaults();
     }
 
@@ -162,6 +191,50 @@ class TransactionFormController extends GetxController {
   }
 
   void selectPaymentMethod(PaymentMethod? value) => paymentMethod.value = value;
+
+  // ---- Keypad editing -----------------------------------------------------
+  // The quick-add sheet drives the amount itself instead of using the system
+  // keyboard, so these enforce the same shape `AmountInputFormatter` does.
+
+  /// Longest whole-number part accepted, matching [Validators.maxAmount].
+  static const int maxWholeDigits = 9;
+
+  void appendDigit(String digit) {
+    final current = amountField.text;
+
+    if (current.contains('.')) {
+      final decimals = current.split('.').last;
+      if (decimals.length >= 2) return;
+    } else if (current.length >= maxWholeDigits) {
+      return;
+    }
+
+    // A leading zero is a placeholder, not a digit the user meant to keep.
+    final next = current == '0' ? digit : '$current$digit';
+    _setAmount(next);
+  }
+
+  void appendDecimalPoint() {
+    final current = amountField.text;
+    if (current.contains('.')) return;
+    _setAmount(current.isEmpty ? '0.' : '$current.');
+  }
+
+  void backspace() {
+    final current = amountField.text;
+    if (current.isEmpty) return;
+    _setAmount(current.substring(0, current.length - 1));
+  }
+
+  void clearAmount() => _setAmount('');
+
+  void _setAmount(String value) {
+    amountField.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
+    );
+    if (fieldErrors.containsKey('amount')) fieldErrors.remove('amount');
+  }
 
   Future<bool> submit() async {
     if (isSubmitting.value) return false;

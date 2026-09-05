@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 
 /// Single place for transient feedback, so tone and placement stay consistent.
 ///
@@ -47,12 +50,20 @@ class AppSnackbar {
       backgroundColor: theme.colorScheme.surface,
       borderColor: theme.dividerColor,
       borderWidth: 1,
-      borderRadius: 14,
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      borderRadius: AppRadius.lg,
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        0,
+        AppSpacing.md,
+        AppSpacing.base,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.base,
+        vertical: AppSpacing.md,
+      ),
       snackPosition: SnackPosition.BOTTOM,
       duration: const Duration(seconds: 3),
-      animationDuration: const Duration(milliseconds: 250),
+      animationDuration: AppMotion.base,
       overlayBlur: 0,
     );
   }

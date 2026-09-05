@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_motion.dart';
+
 import '../../theme/app_colors.dart';
 import '../../utils/formatters.dart';
 
@@ -183,8 +185,8 @@ class _Bar extends StatelessWidget {
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: target),
-      duration: const Duration(milliseconds: 550),
-      curve: Curves.easeOutCubic,
+      duration: AppMotion.slow,
+      curve: AppMotion.enter,
       builder: (context, animated, _) => Container(
         width: width,
         height: animated,

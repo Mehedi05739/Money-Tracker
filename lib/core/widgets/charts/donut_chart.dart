@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../theme/app_motion.dart';
+
 /// One arc of the donut.
 class DonutSlice {
   const DonutSlice({
@@ -45,8 +47,8 @@ class DonutChart extends StatelessWidget {
       height: size,
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: 1),
-        duration: const Duration(milliseconds: 650),
-        curve: Curves.easeOutCubic,
+        duration: AppMotion.slow,
+        curve: AppMotion.enter,
         builder: (context, progress, _) => CustomPaint(
           painter: _DonutPainter(
             slices: total <= 0 ? const [] : slices,

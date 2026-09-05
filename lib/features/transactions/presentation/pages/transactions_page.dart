@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/base/view_state.dart';
-import '../../../../core/enums/transaction_type.dart';
 import '../../../../core/widgets/app_empty_view.dart';
 import '../../../../core/widgets/app_error_view.dart';
 import '../../../../core/widgets/app_loader.dart';
@@ -11,6 +10,7 @@ import '../../../../core/widgets/date_range_selector.dart';
 import '../controllers/transactions_controller.dart';
 import '../widgets/transaction_filter_sheet.dart';
 import '../widgets/transaction_tile.dart';
+import '../widgets/quick_add_sheet.dart';
 import 'transaction_form_page.dart';
 
 class TransactionsPage extends GetView<TransactionsController> {
@@ -287,8 +287,7 @@ class _EmptyLedger extends StatelessWidget {
                     label: const Text('Clear filters'),
                   )
                 : FilledButton.icon(
-                    onPressed: () =>
-                        TransactionFormPage.open(TransactionType.expense),
+                    onPressed: QuickAddSheet.show,
                     icon: const Icon(Icons.add_rounded),
                     label: const Text('Add a transaction'),
                   ),

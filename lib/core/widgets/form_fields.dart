@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../theme/app_elevation.dart';
+import '../theme/app_motion.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 import '../utils/formatters.dart';
 
 /// Labelled text input used by every form, so spacing and error placement are
@@ -132,17 +136,19 @@ class AppPickerField extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: AppRadius.lgAll,
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
           errorText: errorText,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.base,
+            vertical: AppSpacing.md,
+          ),
         ),
         child: Row(
           children: [
-            if (leading != null) ...[leading!, const SizedBox(width: 10)],
+            if (leading != null) ...[leading!, AppSpacing.hGapSm],
             Expanded(
               child: Text(
                 hasValue ? value! : placeholder,
@@ -191,10 +197,10 @@ class AppSegmented<T> extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(AppSpacing.xs),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.lgAll,
       ),
       child: Row(
         children: [
@@ -237,28 +243,20 @@ class _SegmentButton extends StatelessWidget {
       selected: isSelected,
       button: true,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
+        duration: AppMotion.fast,
+        curve: AppMotion.standard,
         decoration: BoxDecoration(
           color: isSelected ? theme.colorScheme.surface : Colors.transparent,
-          borderRadius: BorderRadius.circular(11),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
+          borderRadius: AppRadius.smAll,
+          boxShadow: isSelected ? AppElevation.raised(context) : null,
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(11),
+            borderRadius: AppRadius.smAll,
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 11),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -270,7 +268,7 @@ class _SegmentButton extends StatelessWidget {
                           ? accent
                           : theme.colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(width: 6),
+                    AppSpacing.hGapSm,
                   ],
                   Flexible(
                     child: Text(

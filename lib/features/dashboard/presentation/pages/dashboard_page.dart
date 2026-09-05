@@ -12,10 +12,10 @@ import '../../../../core/widgets/date_range_selector.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../../../core/widgets/stat_tile.dart';
 import '../../../../core/base/view_state.dart';
-import '../../../../core/enums/transaction_type.dart';
 import '../../../../domain/entities/analytics.dart';
 import '../../../../routes/app_routes.dart';
 import '../../../transactions/presentation/pages/transaction_form_page.dart';
+import '../../../transactions/presentation/widgets/quick_add_sheet.dart';
 import '../../../transactions/presentation/widgets/transaction_tile.dart';
 import '../controllers/dashboard_controller.dart';
 import '../widgets/balance_header.dart';
@@ -171,8 +171,7 @@ class _DashboardBody extends StatelessWidget {
               message: 'Record your first expense to see your money at work.',
               icon: Icons.receipt_long_outlined,
               action: FilledButton.icon(
-                onPressed: () =>
-                    TransactionFormPage.open(TransactionType.expense),
+                onPressed: QuickAddSheet.show,
                 icon: const Icon(Icons.add_rounded),
                 label: const Text('Add a transaction'),
               ),

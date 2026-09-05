@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
+import '../theme/app_spacing.dart';
 
 /// Budget/goal progress bar that turns amber near the limit and red past it.
 class AppProgressBar extends StatelessWidget {
@@ -9,7 +11,7 @@ class AppProgressBar extends StatelessWidget {
     required this.value,
     this.color,
     this.warningThreshold = 0.8,
-    this.height = 8,
+    this.height = AppSpacing.sm,
     this.exceeded = false,
     this.animate = true,
   });
@@ -41,8 +43,8 @@ class AppProgressBar extends StatelessWidget {
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: value.clamp(0.0, 1.0)),
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOutCubic,
+      duration: AppMotion.slow,
+      curve: AppMotion.enter,
       builder: (context, animated, _) => ClipRRect(
         borderRadius: BorderRadius.circular(height),
         child: LinearProgressIndicator(
