@@ -346,6 +346,50 @@ rows, the account list, budget statuses, the current plan (3), and goals.
 Everything starts together and is awaited in order, so it costs one round trip
 of wall time.
 
+## Reports & analytics
+
+Eight reports — income vs expense, monthly and daily spending, by category, by
+account, savings trend, budget performance, plan performance — grouped into
+three tabs by the question they answer, because one scroll cannot hold eight
+legibly.
+
+Every figure is a SQL aggregate. `AnalyticsRepository.getReportSnapshot` runs
+five grouped queries (totals, the previous window's totals, the trend, the
+category breakdown with its grand total, the account breakdown, the heaviest
+day), starts them together and awaits them in order, so the screen costs one
+round trip rather than one per chart. Budget and plan performance reuse
+`BudgetDao.findWithSpend` and `SpendingPlanDao.findProgress`, which already join
+their spend in a single pass — the report layer adds no second way to compute
+the same numbers.
+
+The one thing computed in Dart is the savings trend's running total, a prefix
+sum over the buckets the database already grouped — at most a few dozen points,
+never the transactions behind them. SQLite could do it with a window function,
+but those need SQLite 3.25+, which is not guaranteed on the older Android system
+libraries this app still runs on.
+
+"Highest spending day" is its own `GROUP BY day ... LIMIT 1` rather than a scan
+of the trend series, so it stays a real calendar day even when the chart is
+bucketed by month. Both new aggregates resolve through `idx_tx_type_date`.
+
+Filters are rolling windows — `last7Days` through `lastYear` — distinct from the
+calendar presets the dashboard uses: "30 days" is the last thirty days wherever
+today falls, where "This month" restarts on the 1st. Picking a window longer
+than about three months switches the trend to monthly buckets, since a year of
+daily bars is unreadable.
+
+### Charts
+
+`core/widgets/charts/` holds four components, each driven by a plain data class
+so no chart knows what it is plotting: `DonutChart`, `GroupedBarChart`,
+`LineTrendChart`, and `MeasureBarList` — the ranked label/amount/bar row shared
+by the category, account, budget and plan reports, which is what keeps those
+four looking like one product.
+
+None of them animate. A chart here is read, not watched, and a bar that grows
+into place on every filter change makes comparing two periods slower rather than
+nicer.
+
 ## Performance
 
 - Reports and dashboards are indexed `GROUP BY` aggregates. No screen loads

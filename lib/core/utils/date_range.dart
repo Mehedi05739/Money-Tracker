@@ -9,6 +9,16 @@ enum DateRangePreset {
   lastMonth,
   thisYear,
   allTime,
+
+  /// Rolling windows ending today, used by the report filters. Distinct from
+  /// the calendar presets above: "30 days" is the last thirty days wherever
+  /// today falls, where "This month" restarts on the 1st.
+  last7Days,
+  last30Days,
+  last3Months,
+  last6Months,
+  lastYear,
+
   custom;
 
   String get label => switch (this) {
@@ -19,6 +29,11 @@ enum DateRangePreset {
     DateRangePreset.lastMonth => 'Last month',
     DateRangePreset.thisYear => 'This year',
     DateRangePreset.allTime => 'All time',
+    DateRangePreset.last7Days => '7 days',
+    DateRangePreset.last30Days => '30 days',
+    DateRangePreset.last3Months => '3 months',
+    DateRangePreset.last6Months => '6 months',
+    DateRangePreset.lastYear => '1 year',
     DateRangePreset.custom => 'Custom',
   };
 }
@@ -73,6 +88,11 @@ class DateRange {
         end: AppDate.endOfDay(today),
         preset: preset,
       ),
+      DateRangePreset.last7Days => _rollingDays(today, 7, preset),
+      DateRangePreset.last30Days => _rollingDays(today, 30, preset),
+      DateRangePreset.last3Months => _rollingMonths(today, 3, preset),
+      DateRangePreset.last6Months => _rollingMonths(today, 6, preset),
+      DateRangePreset.lastYear => _rollingMonths(today, 12, preset),
       DateRangePreset.custom => DateRange(
         start: AppDate.startOfMonth(today),
         end: AppDate.endOfMonth(today),
@@ -80,6 +100,33 @@ class DateRange {
       ),
     };
   }
+
+  /// The window of exactly [days] days ending today, today included — so
+  /// "7 days" spans seven days rather than eight.
+  static DateRange _rollingDays(
+    DateTime today,
+    int days,
+    DateRangePreset preset,
+  ) => DateRange(
+    start: AppDate.startOfDay(today.subtract(Duration(days: days - 1))),
+    end: AppDate.endOfDay(today),
+    preset: preset,
+  );
+
+  /// The window of exactly [months] months ending today. The start is nudged a
+  /// day forward for the same reason as [_rollingDays]: the day [months] months
+  /// ago belongs to the preceding window, not this one.
+  static DateRange _rollingMonths(
+    DateTime today,
+    int months,
+    DateRangePreset preset,
+  ) => DateRange(
+    start: AppDate.startOfDay(
+      AppDate.addMonths(today, -months).add(const Duration(days: 1)),
+    ),
+    end: AppDate.endOfDay(today),
+    preset: preset,
+  );
 
   factory DateRange.custom(DateTime start, DateTime end) => DateRange(
     start: AppDate.startOfDay(start),

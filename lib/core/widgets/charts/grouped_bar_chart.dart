@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_motion.dart';
-
 import '../../theme/app_colors.dart';
 import '../../utils/formatters.dart';
 
@@ -189,17 +187,15 @@ class _Bar extends StatelessWidget {
         ? 2.0
         : (fraction * plotHeight).clamp(3.0, plotHeight);
 
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: target),
-      duration: AppMotion.slow,
-      curve: AppMotion.enter,
-      builder: (context, animated, _) => Container(
-        width: width,
-        height: animated,
-        decoration: BoxDecoration(
-          color: value <= 0 ? color.withValues(alpha: 0.25) : color,
-          borderRadius: BorderRadius.circular(width / 2),
-        ),
+    // Drawn at its final height rather than grown into place: the chart is
+    // read, not watched, and a bar that animates on every filter change makes
+    // comparing two periods slower, not nicer.
+    return Container(
+      width: width,
+      height: target,
+      decoration: BoxDecoration(
+        color: value <= 0 ? color.withValues(alpha: 0.25) : color,
+        borderRadius: BorderRadius.circular(width / 2),
       ),
     );
   }

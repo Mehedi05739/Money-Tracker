@@ -88,9 +88,15 @@ class AppDate {
   /// Calendar-aware month arithmetic that clamps overflowing days:
   /// 31 Jan + 1 month → 28/29 Feb, not 2/3 Mar.
   static DateTime addMonths(DateTime value, int months) {
-    final targetMonth = value.month + months;
-    final year = value.year + (targetMonth - 1) ~/ 12;
-    final month = (targetMonth - 1) % 12 + 1;
+    // Zero-based so the year rolls on a multiple of 12. The division must
+    // *floor*, not truncate: Dart's `~/` rounds toward zero, which for any
+    // backwards step across January (say -1 from a January date) left the year
+    // untouched and wrapped the month forward instead — "last month" viewed in
+    // January landed on December of the year ahead.
+    final zeroBasedMonth = value.month - 1 + months;
+    final year = value.year + (zeroBasedMonth / 12).floor();
+    // Dart's `%` is already non-negative for a positive divisor.
+    final month = zeroBasedMonth % 12 + 1;
     final lastDay = DateTime(year, month + 1, 0).day;
     return DateTime(
       year,

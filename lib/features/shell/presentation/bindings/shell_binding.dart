@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../../core/events/app_events.dart';
 import '../../../../domain/repositories/account_repository.dart';
 import '../../../../domain/repositories/analytics_repository.dart';
+import '../../../../domain/repositories/budget_repository.dart';
 import '../../../../domain/repositories/category_repository.dart';
 import '../../../../domain/repositories/dashboard_repository.dart';
 import '../../../../domain/repositories/spending_plan_repository.dart';
@@ -51,6 +52,8 @@ class ShellBinding extends Bindings {
     Get.lazyPut(
       () => ReportsController(
         Get.find<AnalyticsRepository>(),
+        Get.find<BudgetRepository>(),
+        Get.find<SpendingPlanRepository>(),
         Get.find<AppEvents>(),
       ),
       fenix: true,

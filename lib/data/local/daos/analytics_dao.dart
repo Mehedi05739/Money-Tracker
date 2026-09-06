@@ -242,6 +242,92 @@ class AnalyticsDao {
     );
   }
 
+  /// Spending grouped by the account it came out of.
+  ///
+  /// Expenses only: a transfer leaves one account and lands in another, so
+  /// counting it here would report moving money as spending it. The grand
+  /// total is a separate scalar for the same reason as
+  /// [categoryBreakdown] — `LIMIT`-ed rows must not define the denominator.
+  Future<AccountBreakdown> accountBreakdown(
+    DateRange range, {
+    int limit = 20,
+  }) async {
+    final rows = await _db.rawQuery(
+      '''
+      SELECT t.${TransactionColumns.accountId}  AS account_id,
+             a.${AccountColumns.name}           AS account_name,
+             a.${AccountColumns.icon}           AS account_icon,
+             a.${AccountColumns.color}          AS account_color,
+             SUM(t.${TransactionColumns.amount}) AS total,
+             COUNT(*)                            AS tx_count
+      FROM ${Tables.transactions} t
+      LEFT JOIN ${Tables.accounts} a
+             ON a.${AccountColumns.id} = t.${TransactionColumns.accountId}
+      WHERE t.${TransactionColumns.type} = 'expense'
+        AND t.${TransactionColumns.transactionDate} BETWEEN ? AND ?
+      GROUP BY t.${TransactionColumns.accountId}
+      ORDER BY total DESC
+      LIMIT ?
+      ''',
+      [range.startDb, range.endDb, limit],
+    );
+
+    final totals = await _db.rawQuery(
+      'SELECT COALESCE(SUM(${TransactionColumns.amount}), 0) AS grand_total '
+      'FROM ${Tables.transactions} '
+      "WHERE ${TransactionColumns.type} = 'expense' "
+      'AND ${TransactionColumns.transactionDate} BETWEEN ? AND ?',
+      [range.startDb, range.endDb],
+    );
+    final grandTotal = totals.first.readDoubleOr('grand_total');
+
+    return AccountBreakdown(
+      total: grandTotal,
+      entries: rows
+          .map(
+            (row) => AccountSpending(
+              accountId: row.readIntOrNull('account_id') ?? 0,
+              accountName: row.readStringOrNull('account_name') ?? 'Unknown',
+              accountIcon: row.readStringOrNull('account_icon'),
+              accountColor: row.readIntOrNull('account_color'),
+              amount: row.readDoubleOr('total'),
+              transactionCount: row.readIntOrNull('tx_count') ?? 0,
+            ).withShare(grandTotal),
+          )
+          .toList(),
+    );
+  }
+
+  /// The heaviest single day of spending in [range].
+  ///
+  /// Grouped and ordered in SQL with `LIMIT 1` so the answer is one row,
+  /// independent of how the trend chart happens to be bucketed — a monthly
+  /// chart still reports a real calendar day here.
+  Future<DaySpending?> highestSpendingDay(DateRange range) async {
+    final rows = await _db.rawQuery(
+      '''
+      SELECT substr(${TransactionColumns.transactionDate}, 1, 10) AS day,
+             SUM(${TransactionColumns.amount}) AS total,
+             COUNT(*)                          AS tx_count
+      FROM ${Tables.transactions}
+      WHERE ${TransactionColumns.type} = 'expense'
+        AND ${TransactionColumns.transactionDate} BETWEEN ? AND ?
+      GROUP BY day
+      ORDER BY total DESC
+      LIMIT 1
+      ''',
+      [range.startDb, range.endDb],
+    );
+
+    if (rows.isEmpty) return null;
+    final row = rows.first;
+    return DaySpending(
+      date: DateTime.parse(row.readString('day')),
+      amount: row.readDoubleOr('total'),
+      transactionCount: row.readIntOrNull('tx_count') ?? 0,
+    );
+  }
+
   /// One point per day that has data. Gaps are filled by the caller so the
   /// query stays a plain aggregate.
   Future<List<TrendPoint>> dailyTrend(DateRange range, {int? accountId}) async {

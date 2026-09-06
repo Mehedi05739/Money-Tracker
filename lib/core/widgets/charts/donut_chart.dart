@@ -2,8 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../theme/app_motion.dart';
-
 /// One arc of the donut.
 class DonutSlice {
   const DonutSlice({
@@ -45,40 +43,34 @@ class DonutChart extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: 1),
-        duration: AppMotion.slow,
-        curve: AppMotion.enter,
-        builder: (context, progress, _) => CustomPaint(
-          painter: _DonutPainter(
-            slices: total <= 0 ? const [] : slices,
-            total: total,
-            strokeWidth: strokeWidth,
-            progress: progress,
-            emptyColor:
-                theme.progressIndicatorTheme.linearTrackColor ??
-                theme.colorScheme.surfaceContainerHighest,
-          ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (centerTitle != null)
-                  Text(
-                    centerTitle!,
-                    style: theme.textTheme.titleMedium,
-                    textAlign: TextAlign.center,
+      child: CustomPaint(
+        painter: _DonutPainter(
+          slices: total <= 0 ? const [] : slices,
+          total: total,
+          strokeWidth: strokeWidth,
+          emptyColor:
+              theme.progressIndicatorTheme.linearTrackColor ??
+              theme.colorScheme.surfaceContainerHighest,
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (centerTitle != null)
+                Text(
+                  centerTitle!,
+                  style: theme.textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+              if (centerSubtitle != null)
+                Text(
+                  centerSubtitle!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                if (centerSubtitle != null)
-                  Text(
-                    centerSubtitle!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-              ],
-            ),
+                  textAlign: TextAlign.center,
+                ),
+            ],
           ),
         ),
       ),
@@ -91,14 +83,12 @@ class _DonutPainter extends CustomPainter {
     required this.slices,
     required this.total,
     required this.strokeWidth,
-    required this.progress,
     required this.emptyColor,
   });
 
   final List<DonutSlice> slices;
   final double total;
   final double strokeWidth;
-  final double progress;
   final Color emptyColor;
 
   static const double _startAngle = -math.pi / 2;
@@ -125,7 +115,7 @@ class _DonutPainter extends CustomPainter {
 
     var angle = _startAngle;
     for (final slice in slices) {
-      final sweep = (slice.value / total) * math.pi * 2 * progress;
+      final sweep = (slice.value / total) * math.pi * 2;
       if (sweep <= 0) continue;
 
       canvas.drawArc(
@@ -142,7 +132,5 @@ class _DonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DonutPainter oldDelegate) =>
-      oldDelegate.progress != progress ||
-      oldDelegate.total != total ||
-      oldDelegate.slices.length != slices.length;
+      oldDelegate.total != total || oldDelegate.slices.length != slices.length;
 }

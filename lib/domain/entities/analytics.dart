@@ -1,3 +1,4 @@
+import '../../core/enums/trend_granularity.dart';
 import '../../core/utils/date_range.dart';
 
 /// Aggregate totals for one window, produced by a single SQL query rather than
@@ -146,6 +147,92 @@ class CategoryBreakdown {
   CategorySpending? get top => entries.isEmpty ? null : entries.first;
 }
 
+/// One account's share of the period's spending.
+class AccountSpending {
+  const AccountSpending({
+    required this.accountId,
+    required this.accountName,
+    required this.amount,
+    required this.transactionCount,
+    this.accountColor,
+    this.accountIcon,
+    this.share = 0,
+  });
+
+  final int accountId;
+  final String accountName;
+  final String? accountIcon;
+  final int? accountColor;
+  final double amount;
+  final int transactionCount;
+
+  /// Percentage of the period total, filled in once the grand total is known.
+  final double share;
+
+  AccountSpending withShare(double total) => AccountSpending(
+    accountId: accountId,
+    accountName: accountName,
+    accountIcon: accountIcon,
+    accountColor: accountColor,
+    amount: amount,
+    transactionCount: transactionCount,
+    share: total <= 0 ? 0 : (amount / total) * 100,
+  );
+}
+
+/// Spending grouped by the account it left, with the total it was measured
+/// against.
+///
+/// Transfers are excluded, so this answers "which account did my spending come
+/// out of", not "which account did money move through".
+class AccountBreakdown {
+  const AccountBreakdown({required this.entries, required this.total});
+
+  const AccountBreakdown.empty() : entries = const [], total = 0;
+
+  final List<AccountSpending> entries;
+  final double total;
+
+  bool get isEmpty => entries.isEmpty;
+
+  AccountSpending? get top => entries.isEmpty ? null : entries.first;
+}
+
+/// The single heaviest spending day in a period.
+///
+/// Read straight from SQL rather than by scanning the trend series, so it stays
+/// a real *day* even when the chart is bucketed by month.
+class DaySpending {
+  const DaySpending({
+    required this.date,
+    required this.amount,
+    required this.transactionCount,
+  });
+
+  final DateTime date;
+  final double amount;
+  final int transactionCount;
+}
+
+/// A running savings balance across the period's buckets.
+///
+/// [cumulative] is what the chart plots: net for the bucket added to everything
+/// before it, so the line shows savings accumulating rather than jittering
+/// around zero.
+class SavingsPoint {
+  const SavingsPoint({
+    required this.label,
+    required this.date,
+    required this.net,
+    required this.cumulative,
+  });
+
+  final String label;
+  final DateTime date;
+  final double net;
+  final double cumulative;
+}
+
 /// A point on the daily/monthly trend chart.
 class TrendPoint {
   const TrendPoint({
@@ -247,4 +334,75 @@ class DashboardSummary {
     return ((totals.income - previousTotals.income) / previousTotals.income) *
         100;
   }
+}
+
+/// Everything the Reports tab draws from the analytics layer, assembled in one
+/// repository round trip.
+///
+/// Mirrors [DashboardSummary]: the alternative is each chart asking for its own
+/// slice, which turns one screen into a dozen independent queries over the same
+/// table.
+class ReportSnapshot {
+  const ReportSnapshot({
+    required this.range,
+    required this.granularity,
+    required this.totals,
+    required this.previousTotals,
+    required this.trend,
+    required this.savingsTrend,
+    required this.categoryBreakdown,
+    required this.accountBreakdown,
+    this.highestDay,
+  });
+
+  ReportSnapshot.empty(this.range, this.granularity)
+    : totals = PeriodTotals.empty(range),
+      previousTotals = PeriodTotals.empty(range.previous),
+      trend = const [],
+      savingsTrend = const [],
+      categoryBreakdown = const CategoryBreakdown.empty(),
+      accountBreakdown = const AccountBreakdown.empty(),
+      highestDay = null;
+
+  final DateRange range;
+  final TrendGranularity granularity;
+  final PeriodTotals totals;
+  final PeriodTotals previousTotals;
+
+  /// Income and expense per bucket, at [granularity].
+  final List<TrendPoint> trend;
+
+  /// The same buckets carried forward as a running savings balance.
+  final List<SavingsPoint> savingsTrend;
+
+  final CategoryBreakdown categoryBreakdown;
+  final AccountBreakdown accountBreakdown;
+
+  /// The heaviest single day of spending, or `null` when nothing was spent.
+  final DaySpending? highestDay;
+
+  bool get isEmpty => totals.isEmpty;
+
+  CategorySpending? get topCategory => categoryBreakdown.top;
+  AccountSpending? get topAccount => accountBreakdown.top;
+
+  /// Change in spending against the preceding equal-length window, signed.
+  /// `null` when there is nothing to compare against.
+  double? get expenseChangePercent {
+    if (previousTotals.expense <= 0) return null;
+    return ((totals.expense - previousTotals.expense) /
+            previousTotals.expense) *
+        100;
+  }
+
+  double? get incomeChangePercent {
+    if (previousTotals.income <= 0) return null;
+    return ((totals.income - previousTotals.income) / previousTotals.income) *
+        100;
+  }
+
+  /// Running savings carried to the end of the period — the last point of
+  /// [savingsTrend], which equals [PeriodTotals.netSavings].
+  double get closingSavings =>
+      savingsTrend.isEmpty ? totals.netSavings : savingsTrend.last.cumulative;
 }

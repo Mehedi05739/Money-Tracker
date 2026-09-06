@@ -1,3 +1,4 @@
+import '../../core/enums/trend_granularity.dart';
 import '../../core/enums/transaction_type.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/result.dart';
@@ -39,6 +40,81 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
   @override
   Future<Result<List<TrendPoint>>> getMonthlyTrend(DateRange range) =>
       guard(() => _dao.monthlyTrend(range), context: 'monthlyTrend');
+
+  @override
+  Future<Result<AccountBreakdown>> getAccountBreakdown(
+    DateRange range, {
+    int limit = 20,
+  }) => guard(
+    () => _dao.accountBreakdown(range, limit: limit),
+    context: 'accountBreakdown',
+  );
+
+  @override
+  Future<Result<DaySpending?>> getHighestSpendingDay(DateRange range) => guard(
+    () => _dao.highestSpendingDay(range),
+    context: 'highestSpendingDay',
+  );
+
+  /// Assembles the whole Reports tab in five queries.
+  ///
+  /// Each is a grouped aggregate over an index; none returns transaction rows.
+  /// They are started together and awaited in order, so the screen costs one
+  /// round trip of wall time rather than five.
+  @override
+  Future<Result<ReportSnapshot>> getReportSnapshot(
+    DateRange range, {
+    TrendGranularity granularity = TrendGranularity.daily,
+    TransactionType breakdownType = TransactionType.expense,
+  }) {
+    return guard(() async {
+      final totalsFuture = _dao.totals(range);
+      final previousFuture = _dao.totals(range.previous);
+      final trendFuture = granularity.isDaily
+          ? _dao
+                .dailyTrend(range)
+                .then((points) => AnalyticsDao.fillDailyGaps(points, range))
+          : _dao.monthlyTrend(range);
+      final categoryFuture = _dao.categoryBreakdown(range, type: breakdownType);
+      final accountFuture = _dao.accountBreakdown(range);
+      final highestDayFuture = _dao.highestSpendingDay(range);
+
+      final totals = await totalsFuture;
+      final previous = await previousFuture;
+      final trend = await trendFuture;
+
+      return ReportSnapshot(
+        range: range,
+        granularity: granularity,
+        totals: totals,
+        previousTotals: previous,
+        trend: trend,
+        savingsTrend: _accumulate(trend),
+        categoryBreakdown: await categoryFuture,
+        accountBreakdown: await accountFuture,
+        highestDay: await highestDayFuture,
+      );
+    }, context: 'reportSnapshot');
+  }
+
+  /// Carries each bucket's net forward into a running savings balance.
+  ///
+  /// A prefix sum over buckets the database already grouped — at most a few
+  /// dozen points, never the underlying transactions. SQLite could do it with a
+  /// window function, but those need SQLite 3.25+, which is not guaranteed on
+  /// the older Android system libraries this app still runs on.
+  static List<SavingsPoint> _accumulate(List<TrendPoint> trend) {
+    var running = 0.0;
+    return [
+      for (final point in trend)
+        SavingsPoint(
+          label: point.label,
+          date: point.date,
+          net: point.net,
+          cumulative: running += point.net,
+        ),
+    ];
+  }
 
   /// Assembles the dashboard in four queries, not a dozen.
   ///
