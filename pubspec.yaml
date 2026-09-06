@@ -52,6 +52,11 @@ dependencies:
   flutter_timezone: ^4.1.1
 
 dev_dependencies:
+  # Build-time only: generates the Android mipmaps, adaptive-icon layers and
+  # the iOS asset catalogue from one source image. Nothing here ships in the
+  # app itself.
+  flutter_launcher_icons: ^0.14.4
+
   flutter_test:
     sdk: flutter
 
@@ -104,3 +109,21 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Run `dart run flutter_launcher_icons` after changing the source image.
+flutter_launcher_icons:
+  image_path: "assets/branding/app_icon.png"
+
+  android: "ic_launcher"
+  # Adaptive icons are masked to whatever shape the launcher uses, and the
+  # system crops ~25% off each edge. The logo therefore goes on its own padded
+  # foreground over a flat background rather than being scaled to fill, or the
+  # wallet's edges are shaved off on round-icon launchers.
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/branding/app_icon_foreground.png"
+  min_sdk_android: 21
+
+  ios: true
+  # iOS rejects icons with an alpha channel, so the transparent areas are
+  # flattened onto white.
+  remove_alpha_ios: true
