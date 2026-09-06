@@ -64,6 +64,38 @@ class RecurringRepositoryImpl implements RecurringRepository {
   Future<Result<int>> postDueOccurrences(RecurringTransaction rule) =>
       guard(() => _dao.postDueOccurrences(rule), context: 'postRecurring');
 
+  @override
+  Future<Result<bool>> isOccurrenceProcessed(int ruleId, DateTime date) =>
+      guard(
+        () => _dao.isOccurrenceProcessed(ruleId, date),
+        context: 'isOccurrenceProcessed',
+      );
+
+  @override
+  Future<Result<List<RecurringOccurrence>>> getOccurrences(
+    int ruleId, {
+    int limit = 50,
+  }) => guard(
+    () => _dao.findOccurrences(ruleId, limit: limit),
+    context: 'recurringOccurrences',
+  );
+
+  @override
+  Future<Result<List<UpcomingOccurrence>>> getUpcoming({
+    int perRule = 3,
+    int limit = 12,
+  }) => guard(() async {
+    final rules = await _dao.find(activeOnly: true);
+
+    final upcoming = [
+      for (final rule in rules)
+        for (final date in rule.upcomingDates(count: perRule))
+          UpcomingOccurrence(rule: rule, date: date),
+    ]..sort((a, b) => a.date.compareTo(b.date));
+
+    return upcoming.take(limit).toList();
+  }, context: 'recurringUpcoming');
+
   Failure? _validate(RecurringTransaction rule) {
     final errors = <String, String>{};
 

@@ -346,6 +346,58 @@ rows, the account list, budget statuses, the current plan (3), and goals.
 Everything starts together and is awaited in order, so it costs one round trip
 of wall time.
 
+## Recurring transactions
+
+A rule stores the commitment — title, amount, type, category, account,
+frequency, start and end date, next occurrence, active flag, note. Rules are
+materialised into real transactions by `RecurringService.runDue()`, called at
+startup and from the "run now" button: the app is offline-first with no
+background execution, so "catch up on everything missed since last launch" is
+the correct model.
+
+### Not creating duplicates
+
+Two independent layers, and the second is the one that actually guarantees it.
+
+The **cursor** (`next_run_date`) says where to resume. On its own that is only
+as trustworthy as the procedure around it: `runDue` reads its rules up front, so
+the startup catch-up overlapping with a manual run leaves both holding a copy
+whose cursor is still the original, and both would post the same day.
+
+The **ledger** is the guarantee. `recurring_occurrences` holds one row per
+occurrence a rule has produced, under a unique index on
+`(recurring_id, occurrence_date)`. Posting claims that row *before* writing the
+transaction; a claim that collides with the index means the occurrence is
+already processed, so the insert is skipped. Duplicate prevention is therefore a
+database invariant, not a procedure that has to be executed carefully — a
+replayed run, two overlapping runs, or a cursor rewound by a bad edit or a
+restored backup all bounce off the index.
+
+`occurrence_date` is a day key (`YYYY-MM-DD`), not a timestamp, so uniqueness
+cannot be defeated by what time of day the app happened to run. Posting also
+re-reads the rule inside its own SQL transaction, which is what stops a rule
+paused between fetch and post from being posted anyway.
+
+The ledger deliberately outlives the transaction it created: `transaction_id`
+becomes `NULL` when that transaction is deleted, but the occurrence row stays.
+Deleting a generated transaction is a decision, and the next catch-up must not
+quietly undo it.
+
+`isOccurrenceProcessed(ruleId, date)` is the direct form of the question, a
+covering-index lookup. `getOccurrences(ruleId)` lists what a rule has produced.
+
+Migration v3 creates the table and **backfills** it from transactions that
+already carry a `recurring_id`, so an install upgrading from v2 starts with a
+truthful ledger rather than an empty one that would report every past occurrence
+as unprocessed.
+
+### Upcoming
+
+`getUpcoming()` projects the next occurrences across active rules from
+`upcomingDates()` and sorts them. Nothing is written ahead of time: a projection
+cannot drift out of step with an edited schedule the way a table of pre-written
+future rows would, and there is nothing to clean up when a rule changes.
+
 ## Reports & analytics
 
 Eight reports — income vs expense, monthly and daily spending, by category, by

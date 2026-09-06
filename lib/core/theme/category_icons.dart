@@ -50,6 +50,7 @@ class CategoryIcons {
     'book': Icons.menu_book_rounded,
     'tools': Icons.handyman_rounded,
     'wifi': Icons.wifi_rounded,
+    'shield': Icons.shield_rounded,
   };
 
   /// Names offered in the icon picker, in display order.

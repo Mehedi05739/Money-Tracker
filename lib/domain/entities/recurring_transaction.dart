@@ -97,6 +97,25 @@ class RecurringTransaction with ValueEquality {
     RecurrenceFrequency.yearly => AppDate.addMonths(from, 12 * intervalCount),
   };
 
+  /// The next [count] dates this rule will fire, starting at [nextRunDate].
+  ///
+  /// Derived, never stored: a projection cannot drift out of step with the rule
+  /// the way a table of pre-written future rows would.
+  List<DateTime> upcomingDates({int count = 3, DateTime? until}) {
+    if (!isActive) return const [];
+
+    final dates = <DateTime>[];
+    var cursor = nextRunDate;
+
+    while (dates.length < count) {
+      if (endDate != null && cursor.isAfter(AppDate.endOfDay(endDate!))) break;
+      if (until != null && cursor.isAfter(until)) break;
+      dates.add(cursor);
+      cursor = occurrenceAfter(cursor);
+    }
+    return dates;
+  }
+
   RecurringTransaction copyWith({
     int? id,
     int? accountId,
@@ -167,4 +186,53 @@ class RecurringTransaction with ValueEquality {
     categoryColor,
     accountName,
   ];
+}
+
+/// One occurrence a recurring rule has already produced.
+///
+/// The ledger that makes duplicate prevention checkable: the presence of a row
+/// for `(recurringId, date)` *is* the answer to "has this occurrence been
+/// processed", and a unique index on that pair is what stops a second one being
+/// written. It outlives [transactionId] on purpose — deleting a generated
+/// transaction must not make the app re-create it on the next catch-up.
+class RecurringOccurrence with ValueEquality {
+  const RecurringOccurrence({
+    required this.id,
+    required this.recurringId,
+    required this.date,
+    required this.postedAt,
+    this.transactionId,
+  });
+
+  final int id;
+  final int recurringId;
+
+  /// The day the occurrence belongs to, normalised to midnight.
+  final DateTime date;
+
+  /// The transaction produced, or `null` if it has since been deleted.
+  final int? transactionId;
+
+  final DateTime postedAt;
+
+  /// Whether the transaction this occurrence created still exists.
+  bool get hasTransaction => transactionId != null;
+
+  @override
+  List<Object?> get props => [id, recurringId, date, transactionId, postedAt];
+}
+
+/// A future occurrence, projected rather than stored.
+///
+/// Nothing is written ahead of time — the schedule is derived from the rule on
+/// demand, so editing a rule changes what is upcoming with no rows to clean up.
+class UpcomingOccurrence {
+  const UpcomingOccurrence({required this.rule, required this.date});
+
+  final RecurringTransaction rule;
+  final DateTime date;
+
+  int get daysAway => AppDate.daysBetween(DateTime.now(), date);
+
+  bool get isDue => !date.isAfter(AppDate.endOfDay(DateTime.now()));
 }

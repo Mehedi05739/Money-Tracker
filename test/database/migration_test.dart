@@ -91,6 +91,93 @@ void main() {
       expect((accounts.first['current_balance']! as num).toDouble(), 10.0);
     });
 
+    test('v3 backfills the occurrence ledger from transactions a rule already '
+        'generated', () async {
+      // The case that matters for anyone already using the app: at v2 the only
+      // record that an occurrence was posted is the rule's cursor. If v3 shipped
+      // an empty ledger, every past occurrence would read as unprocessed and a
+      // rewound or recomputed cursor could charge the user twice.
+      final file =
+          '${Directory.systemTemp.path}/mt_v3_${DateTime.now().microsecondsSinceEpoch}.db';
+      final v2 = await openAt(file, 2);
+
+      final ruleId = await v2.db.insert('recurring_transactions', {
+        'account_id': 1,
+        'category_id': 1,
+        'type': 'expense',
+        'amount': 1200.0,
+        'title': 'Rent',
+        'frequency': 'monthly',
+        'interval_count': 1,
+        'start_date': '2026-06-01T00:00:00.000',
+        'next_run_date': '2026-09-01T00:00:00.000',
+        'is_active': 1,
+        'auto_post': 1,
+        'created_at': '2026-06-01T00:00:00.000',
+        'updated_at': '2026-06-01T00:00:00.000',
+      });
+
+      for (final date in ['2026-06-01', '2026-07-01', '2026-08-01']) {
+        await v2.db.insert('transactions', {
+          'account_id': 1,
+          'type': 'expense',
+          'amount': 1200.0,
+          'category_id': 1,
+          'title': 'Rent',
+          'transaction_date': '${date}T00:00:00.000',
+          'recurring_id': ruleId,
+          'created_at': '${date}T00:00:00.000',
+          'updated_at': '${date}T00:00:00.000',
+        });
+      }
+
+      // A transaction the user entered by hand must not enter the ledger.
+      await v2.db.insert('transactions', {
+        'account_id': 1,
+        'type': 'expense',
+        'amount': 20.0,
+        'category_id': 1,
+        'title': 'Coffee',
+        'transaction_date': '2026-08-15T00:00:00.000',
+        'created_at': '2026-08-15T00:00:00.000',
+        'updated_at': '2026-08-15T00:00:00.000',
+      });
+
+      expect(await indexesOf(v2), isNot(contains('idx_recurring_occurrence')));
+      await v2.close();
+
+      final upgraded = await openAt(file, kDatabaseVersion);
+      addTearDown(upgraded.close);
+
+      expect(await indexesOf(upgraded), contains('idx_recurring_occurrence'));
+
+      final ledger = await upgraded.db.query(
+        'recurring_occurrences',
+        orderBy: 'occurrence_date ASC',
+      );
+      expect(ledger, hasLength(3), reason: 'one per generated transaction');
+      expect(ledger.map((row) => row['occurrence_date']), [
+        '2026-06-01',
+        '2026-07-01',
+        '2026-08-01',
+      ]);
+      expect(
+        ledger.every((row) => row['transaction_id'] != null),
+        isTrue,
+        reason: 'each backfilled row points at the transaction it came from',
+      );
+
+      // The uniqueness that makes the ledger a guarantee is in force.
+      await expectLater(
+        upgraded.db.insert('recurring_occurrences', {
+          'recurring_id': ruleId,
+          'occurrence_date': '2026-07-01',
+          'posted_at': '2026-09-01T00:00:00.000',
+        }),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
     test('re-opening at the current version is a no-op', () async {
       final file =
           '${Directory.systemTemp.path}/mt_noop_${DateTime.now().microsecondsSinceEpoch}.db';

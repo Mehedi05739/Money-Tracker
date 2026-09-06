@@ -145,6 +145,39 @@ class _RecurringList extends StatelessWidget {
           ),
         ),
         AppSpacing.gapBase,
+        Obx(() {
+          final upcoming = controller.upcoming;
+          if (upcoming.isEmpty) return const SizedBox.shrink();
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Upcoming', style: theme.textTheme.titleMedium),
+              AppSpacing.gapXs,
+              Text(
+                'The next payments these schedules will record',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              AppSpacing.gapMd,
+              AppCard(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < upcoming.length; i++) ...[
+                      if (i > 0) const Divider(height: 1, indent: 56),
+                      _UpcomingRow(occurrence: upcoming[i]),
+                    ],
+                  ],
+                ),
+              ),
+              AppSpacing.gapLg,
+              Text('Schedules', style: theme.textTheme.titleMedium),
+              AppSpacing.gapMd,
+            ],
+          );
+        }),
         Obx(
           () => Column(
             children: [
@@ -157,6 +190,75 @@ class _RecurringList extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// One projected payment: when it lands, what it is for, and how much.
+class _UpcomingRow extends StatelessWidget {
+  const _UpcomingRow({required this.occurrence});
+
+  final UpcomingOccurrence occurrence;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final rule = occurrence.rule;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.base,
+        vertical: AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          CategoryAvatar(
+            icon: rule.categoryIcon,
+            color: rule.categoryColor,
+            seed: rule.categoryId ?? 0,
+            size: 34,
+          ),
+          AppSpacing.hGapMd,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  rule.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyLarge,
+                ),
+                Text(
+                  '${rule.categoryName ?? 'Uncategorised'} · $_whenLabel',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: occurrence.isDue
+                        ? context.warningColor
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          AppSpacing.hGapSm,
+          AmountText(
+            amount: rule.amount,
+            type: rule.type,
+            style: theme.textTheme.titleSmall,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String get _whenLabel {
+    if (occurrence.isDue) return 'Due now';
+    final days = occurrence.daysAway;
+    if (days == 0) return 'Today';
+    if (days == 1) return 'Tomorrow';
+    if (days < 7) return 'In $days days';
+    return AppDate.formatDate(occurrence.date);
   }
 }
 

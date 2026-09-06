@@ -12,6 +12,7 @@ class Tables {
   static const String financialGoals = 'financial_goals';
   static const String goalContributions = 'goal_contributions';
   static const String recurringTransactions = 'recurring_transactions';
+  static const String recurringOccurrences = 'recurring_occurrences';
   static const String appSettings = 'app_settings';
 }
 
@@ -145,6 +146,25 @@ class RecurringColumns {
   static const String autoPost = 'auto_post';
   static const String createdAt = 'created_at';
   static const String updatedAt = 'updated_at';
+}
+
+/// The ledger of occurrences a recurring rule has already produced.
+class RecurringOccurrenceColumns {
+  const RecurringOccurrenceColumns._();
+  static const String id = 'id';
+  static const String recurringId = 'recurring_id';
+
+  /// The day the occurrence falls on, as `YYYY-MM-DD`.
+  ///
+  /// A day key rather than a timestamp so "one occurrence per rule per day" is
+  /// exact: the uniqueness that prevents duplicates must not depend on what
+  /// time of day the app happened to run.
+  static const String occurrenceDate = 'occurrence_date';
+
+  /// The transaction it produced. `NULL` once that transaction is deleted —
+  /// the occurrence stays recorded as processed either way.
+  static const String transactionId = 'transaction_id';
+  static const String postedAt = 'posted_at';
 }
 
 class SettingsColumns {

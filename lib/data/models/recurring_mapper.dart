@@ -73,4 +73,22 @@ class RecurringMapper {
       RecurringColumns.updatedAt: AppDate.toDb(rule.updatedAt),
     };
   }
+
+  /// Reads a row from the occurrence ledger.
+  static RecurringOccurrence occurrenceFromRow(
+    Map<String, Object?> row,
+  ) => RecurringOccurrence(
+    id: row.readIntOrNull(RecurringOccurrenceColumns.id) ?? 0,
+    recurringId: row.readIntOrNull(RecurringOccurrenceColumns.recurringId) ?? 0,
+    // Stored as a day key, so it parses back to midnight local time.
+    date: DateTime.parse(
+      row.readString(RecurringOccurrenceColumns.occurrenceDate),
+    ),
+    transactionId: row.readIntOrNull(RecurringOccurrenceColumns.transactionId),
+    postedAt:
+        AppDate.fromDbOrNull(
+          row.readStringOrNull(RecurringOccurrenceColumns.postedAt),
+        ) ??
+        DateTime.now(),
+  );
 }

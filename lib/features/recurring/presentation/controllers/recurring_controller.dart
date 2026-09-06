@@ -16,6 +16,7 @@ class RecurringController extends BaseController {
   final AppEvents _events;
 
   final RxList<RecurringTransaction> rules = <RecurringTransaction>[].obs;
+  final RxList<UpcomingOccurrence> upcoming = <UpcomingOccurrence>[].obs;
   final RxBool isPosting = false.obs;
 
   List<RecurringTransaction> get dueRules =>
@@ -38,7 +39,11 @@ class RecurringController extends BaseController {
   Future<void> load({bool showLoader = true}) async {
     if (showLoader) setLoading();
 
-    final result = await _repository.getAll();
+    final rulesFuture = _repository.getAll();
+    final upcomingFuture = _repository.getUpcoming();
+
+    final result = await rulesFuture;
+    upcoming.assignAll((await upcomingFuture).dataOrNull ?? const []);
 
     result.fold(
       onSuccess: (data) {

@@ -270,12 +270,18 @@ class TransactionDao {
 
   /// Bulk insert used when materialising recurring rules; shares one SQL
   /// transaction with the caller so a partial run cannot be committed.
-  static Future<void> insertWithinTransaction(
+  /// Returns the new transaction's id, so a caller writing in the same
+  /// transaction can link its own row to it.
+  static Future<int> insertWithinTransaction(
     DatabaseExecutor txn,
     MoneyTransaction transaction,
   ) async {
-    await txn.insert(Tables.transactions, TransactionMapper.toRow(transaction));
+    final id = await txn.insert(
+      Tables.transactions,
+      TransactionMapper.toRow(transaction),
+    );
     await _adjustBalance(txn, transaction, 1);
+    return id;
   }
 
   Future<void> _applyBalance(

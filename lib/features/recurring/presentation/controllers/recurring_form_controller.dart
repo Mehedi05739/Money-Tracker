@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../../core/events/app_events.dart';
 import '../../../../core/enums/payment_method.dart';
 import '../../../../core/enums/recurrence_frequency.dart';
+import '../../../../core/enums/recurring_preset.dart';
 import '../../../../core/enums/transaction_type.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/date_utils.dart';
@@ -119,6 +120,17 @@ class RecurringFormController extends GetxController {
   void changeType(TransactionType value) {
     type.value = value;
     if (category.value?.type != value) category.value = null;
+  }
+
+  /// Fills in the shape of a common commitment, leaving the figures alone.
+  ///
+  /// Only the title is overwritten, and only when the user has not typed one —
+  /// tapping a chip should never discard something they already entered.
+  void applyPreset(RecurringPreset preset) {
+    changeType(preset.type);
+    frequency.value = preset.frequency;
+    if (titleField.text.trim().isEmpty) titleField.text = preset.label;
+    fieldErrors.remove('title');
   }
 
   void changeFrequency(RecurrenceFrequency value) => frequency.value = value;

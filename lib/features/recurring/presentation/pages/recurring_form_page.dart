@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/enums/recurrence_frequency.dart';
+import '../../../../core/enums/recurring_preset.dart';
+import '../../../../core/theme/category_icons.dart';
 import '../../../../core/enums/transaction_type.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/date_utils.dart';
@@ -48,6 +50,34 @@ class _RecurringFormBody extends GetView<RecurringFormController> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
+              // Only offered when creating: on an existing schedule a chip
+              // would silently rewrite its type and frequency.
+              if (!controller.isEditing) ...[
+                Text(
+                  'Quick start',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                AppSpacing.gapSm,
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    for (final preset in RecurringPreset.values)
+                      ActionChip(
+                        avatar: Icon(
+                          CategoryIcons.resolve(preset.icon),
+                          size: 16,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        label: Text(preset.label),
+                        onPressed: () => controller.applyPreset(preset),
+                      ),
+                  ],
+                ),
+                AppSpacing.gapLg,
+              ],
               Obx(
                 () => AppSegmented<TransactionType>(
                   values: RecurringFormController.allowedTypes,
