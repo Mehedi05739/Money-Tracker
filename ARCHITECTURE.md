@@ -346,6 +346,71 @@ rows, the account list, budget statuses, the current plan (3), and goals.
 Everything starts together and is awaited in order, so it costs one round trip
 of wall time.
 
+## Settings
+
+Preferences live in the `app_settings` key–value table and are loaded before
+the first frame, so the theme, currency symbol and monthly boundary are right
+on the very first paint rather than flashing a default.
+
+### First day of month
+
+The one preference that is not just a stored value. Someone paid on the 25th
+thinks in cycles that run 25th to 24th, and a budget resetting on the 1st is
+useless to them, so `AppDate.firstDayOfMonth` moves `startOfMonth` and
+`endOfMonth` — and with them budget periods, spending plans and "This month" —
+together. It is a mutable static on purpose: this is one app-wide fact, like
+the locale, and threading it through every call would put a preference lookup
+in the middle of pure date arithmetic. Capped at 28 so the anchor exists in
+February.
+
+### Security
+
+The app lock stores no secret. The original brief forbids keeping credentials
+in SQLite, and the way to honour that is not to hash a PIN of our own but to
+have none: `local_auth` defers to the operating system, which already holds the
+user's biometric and device credential. Settings persists only *whether* the
+lock is on.
+
+Enabling asks for authentication first — the user must prove they can get back
+in before the door is locked behind them — and `unlock()` treats an
+*unavailable* authenticator as pass, not fail, so a device whose biometrics
+were removed cannot lock someone out of their own ledger.
+
+### Notifications
+
+`flutter_local_notifications`, scheduled on the device only. Permission is
+requested when a reminder is switched on, never at startup: prompting before
+the user has asked for anything is the fastest way to be refused. If permission
+is declined the toggle returns to off rather than showing an "on" switch that
+will never fire. Notification bodies deliberately carry no amounts — a lock
+screen is a public surface.
+
+### Data
+
+Export is JSON: readable, inspectable, portable. Backup is a byte copy of the
+SQLite file: exact, including schema version. They answer different questions,
+so both exist.
+
+Files are written beside the database, derived from the open connection's path
+rather than the global `databaseFactory`, which is process-wide state anything
+can reassign — a file written to one directory and looked for in another is a
+backup the user cannot find.
+
+**Restore copies contents rather than swapping the file.** The obvious
+implementation — close, copy over, reopen — does not work: every DAO holds the
+`Database` handle resolved at startup, so reopening leaves them all pointing at
+a closed connection and the next query anywhere in the app fails with
+`database_closed`. The backup is opened on its own read-only connection and its
+rows copied into the live one inside a single transaction, which keeps that
+connection valid and makes a failed restore leave the current data untouched.
+Preferences are not part of a restore: it should bring back the ledger, not
+silently change the theme.
+
+Destructive actions go through `DangerDialog`, which requires typing a word
+before the button enables, states plainly what disappears, and is not
+dismissible by tapping away. A single tap is too easy to give by reflex, and
+there is no undo behind it — the ledger is the only copy.
+
 ## Accounts, balances and transfers
 
 An account carries a name, type, opening balance, current balance, currency,

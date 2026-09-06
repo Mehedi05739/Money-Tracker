@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- App lock: defers to the device's own authentication, so no credential
+         is stored by this app. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- Reminders for budgets, plans, goals and scheduled payments. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:label="money_tracker"
         android:name="${applicationName}"

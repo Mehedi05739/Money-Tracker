@@ -74,11 +74,47 @@ class AppDate {
   static DateTime endOfWeek(DateTime value) =>
       endOfDay(startOfWeek(value).add(const Duration(days: 6)));
 
-  static DateTime startOfMonth(DateTime value) =>
-      DateTime(value.year, value.month);
+  /// The day a monthly period begins, 1–28.
+  ///
+  /// Someone paid on the 25th thinks in cycles that run 25th to 24th, and a
+  /// budget that resets on the 1st is useless to them. Set once at startup from
+  /// the stored preference, so every monthly boundary in the app — budget
+  /// periods, spending plans, "This month" — moves together. Capped at 28 so
+  /// the anchor exists in February.
+  ///
+  /// A mutable static is a deliberate choice: this is one app-wide fact, like
+  /// the locale. Threading it through every date call would put a preference
+  /// lookup in the middle of pure date arithmetic.
+  static int firstDayOfMonth = 1;
 
-  static DateTime endOfMonth(DateTime value) =>
-      DateTime(value.year, value.month + 1, 0, 23, 59, 59, 999);
+  /// The largest day-of-month that exists in every month.
+  static const int maxFirstDayOfMonth = 28;
+
+  /// The start of the monthly period containing [value].
+  static DateTime startOfMonth(DateTime value) {
+    final day = firstDayOfMonth.clamp(1, maxFirstDayOfMonth);
+    if (day == 1) return DateTime(value.year, value.month);
+
+    final anchor = DateTime(value.year, value.month, day);
+    // Before this month's anchor, the period still belongs to the month before.
+    if (value.isBefore(anchor)) {
+      final previous = addMonths(DateTime(value.year, value.month), -1);
+      return DateTime(previous.year, previous.month, day);
+    }
+    return anchor;
+  }
+
+  /// The last instant of the monthly period containing [value].
+  static DateTime endOfMonth(DateTime value) {
+    final day = firstDayOfMonth.clamp(1, maxFirstDayOfMonth);
+    if (day == 1) {
+      return DateTime(value.year, value.month + 1, 0, 23, 59, 59, 999);
+    }
+
+    // Ends the day before the next period opens.
+    final next = addMonths(startOfMonth(value), 1);
+    return endOfDay(next.subtract(const Duration(days: 1)));
+  }
 
   static DateTime startOfYear(DateTime value) => DateTime(value.year);
 

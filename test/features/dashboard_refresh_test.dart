@@ -1,3 +1,10 @@
+import 'package:money_tracker/core/database/app_database.dart';
+import 'package:money_tracker/domain/services/data_transfer_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:money_tracker/core/services/app_lock_service.dart';
+import 'package:money_tracker/core/services/notification_service.dart';
+import 'package:money_tracker/domain/repositories/category_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:money_tracker/core/events/app_events.dart';
@@ -119,6 +126,11 @@ class _StubAccountRepository implements AccountRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _StubCategoryRepository implements CategoryRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   late _CountingDashboardRepository repository;
   late AppEvents events;
@@ -131,7 +143,12 @@ void main() {
     settings = SettingsController(
       _StubSettingsRepository(),
       _StubAccountRepository(),
+      _StubCategoryRepository(),
       CurrencyFormatter(),
+      AppLockService(LocalAuthentication()),
+      NotificationService(FlutterLocalNotificationsPlugin()),
+      DataTransferService(AppDatabase()),
+      events,
     );
     controller = DashboardController(repository, events, settings);
     controller.onInit();

@@ -2,6 +2,15 @@ class AppConstants {
   const AppConstants._();
 
   static const String appName = 'Money Tracker';
+
+  /// Shown in About. Kept in step with `version:` in pubspec.yaml by hand —
+  /// reading the real package version needs a plugin, and this app deliberately
+  /// carries no dependency it does not need.
+  static const String appVersion = '1.0.0';
+
+  /// Where support requests go. Shown for copying rather than opened directly,
+  /// since launching a mail client would mean another dependency.
+  static const String supportEmail = 'support@moneytracker.app';
   static const String databaseFile = 'money_tracker.db';
 
   /// Transactions fetched per page in the ledger list.
@@ -25,6 +34,21 @@ class SettingKeys {
   static const String lastRecurringRun = 'last_recurring_run';
   static const String onboardingComplete = 'onboarding_complete';
   static const String balancesHidden = 'balances_hidden';
+
+  // Financial
+  static const String defaultCategoryId = 'default_category_id';
+  static const String firstDayOfMonth = 'first_day_of_month';
+
+  // Notifications
+  static const String notifyBudget = 'notify_budget';
+  static const String notifyPlan = 'notify_plan';
+  static const String notifyGoal = 'notify_goal';
+  static const String notifyRecurring = 'notify_recurring';
+
+  // Security. Only the *preference* is stored — the credential itself stays
+  // with the operating system, so nothing sensitive reaches SQLite.
+  static const String appLockEnabled = 'app_lock_enabled';
+  static const String appLockBiometric = 'app_lock_biometric';
 }
 
 /// Currencies offered in settings. Symbol is what every amount renders with.

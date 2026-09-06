@@ -132,10 +132,16 @@ class AppDatabase {
     _db = null;
   }
 
-  /// Test/diagnostic helper: wipes user data but keeps the schema and reseeds.
+  /// Wipes every user table and reseeds the defaults, keeping the schema.
+  ///
+  /// Backs the "clear all data" action as well as tests. Children are deleted
+  /// before parents so nothing is orphaned mid-wipe, and the reseed runs inside
+  /// the same transaction — a failure leaves the ledger untouched rather than
+  /// empty and unusable.
   Future<void> resetData() async {
     await db.transaction((txn) async {
       for (final table in const [
+        'recurring_occurrences',
         'goal_contributions',
         'financial_goals',
         'spending_plan_items',

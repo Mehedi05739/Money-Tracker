@@ -13,6 +13,9 @@ import '../features/plans/presentation/pages/plan_detail_page.dart';
 import '../features/plans/presentation/pages/plan_form_page.dart';
 import '../features/recurring/presentation/pages/recurring_form_page.dart';
 import '../features/recurring/presentation/pages/recurring_page.dart';
+import '../core/events/app_events.dart';
+import '../domain/services/data_transfer_service.dart';
+import '../features/settings/presentation/controllers/data_controller.dart';
 import '../features/settings/presentation/pages/settings_page.dart';
 import '../features/shell/presentation/pages/shell_page.dart';
 import '../features/transactions/presentation/pages/transaction_detail_page.dart';
@@ -115,7 +118,21 @@ class AppPages {
       page: () => const RecurringFormPage(),
       binding: RecurringFormBinding(),
     ),
-    GetPage(name: AppRoutes.settings, page: () => const SettingsPage()),
+    GetPage(
+      name: AppRoutes.settings,
+      page: () => const SettingsPage(),
+      // Bound here rather than in Settings' own binding: the Data screen is
+      // pushed from Settings, and its controller must survive that push.
+      binding: BindingsBuilder(() {
+        Get.lazyPut(
+          () => DataController(
+            Get.find<DataTransferService>(),
+            Get.find<AppEvents>(),
+          ),
+          fenix: true,
+        );
+      }),
+    ),
   ];
 
   /// Unknown deep links land back on the shell rather than a dead end.

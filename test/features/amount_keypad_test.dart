@@ -2,19 +2,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:money_tracker/core/enums/transaction_type.dart';
 import 'package:money_tracker/core/events/app_events.dart';
-import 'package:money_tracker/core/services/currency_formatter.dart';
 import 'package:money_tracker/data/local/daos/account_dao.dart';
 import 'package:money_tracker/data/local/daos/category_dao.dart';
-import 'package:money_tracker/data/local/daos/settings_dao.dart';
 import 'package:money_tracker/data/local/daos/transaction_dao.dart';
 import 'package:money_tracker/data/repositories/account_repository_impl.dart';
 import 'package:money_tracker/data/repositories/category_repository_impl.dart';
-import 'package:money_tracker/data/repositories/settings_repository_impl.dart';
 import 'package:money_tracker/data/repositories/transaction_repository_impl.dart';
-import 'package:money_tracker/features/settings/presentation/controllers/settings_controller.dart';
 import 'package:money_tracker/features/transactions/presentation/controllers/transaction_form_controller.dart';
 
 import '../helpers/test_database.dart';
+import '../helpers/test_settings.dart';
 
 /// The quick-add sheet drives the amount through the controller instead of a
 /// system keyboard, so these rules are the only thing between a keypad tap and
@@ -28,12 +25,7 @@ void main() {
     addTearDown(Get.reset);
 
     final accounts = AccountRepositoryImpl(AccountDao(database.db));
-    final settings = SettingsController(
-      SettingsRepositoryImpl(SettingsDao(database.db)),
-      accounts,
-      CurrencyFormatter(),
-    );
-    await settings.load();
+    final settings = await buildSettingsController(database);
 
     controller = TransactionFormController(
       TransactionRepositoryImpl(TransactionDao(database.db)),

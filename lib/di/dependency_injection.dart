@@ -1,9 +1,15 @@
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:local_auth/local_auth.dart';
+
 import 'package:get/get.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/database/app_database.dart';
 import '../core/events/app_events.dart';
 import '../core/services/currency_formatter.dart';
+import '../domain/services/data_transfer_service.dart';
+import '../core/services/notification_service.dart';
+import '../core/services/app_lock_service.dart';
 import '../data/local/daos/account_dao.dart';
 import '../data/local/daos/analytics_dao.dart';
 import '../data/local/daos/budget_dao.dart';
@@ -131,14 +137,29 @@ class DependencyInjection {
       ..put(CurrencyFormatter(), permanent: true);
 
     Get.put(RecurringService(Get.find<RecurringRepository>()), permanent: true);
+    Get.put(DataTransferService(Get.find<AppDatabase>()), permanent: true);
+    Get.put(AppLockService(LocalAuthentication()), permanent: true);
 
-    // Loaded before the first frame so the theme and currency symbol are
-    // correct on the very first paint.
+    final notifications = Get.put(
+      NotificationService(FlutterLocalNotificationsPlugin()),
+      permanent: true,
+    );
+    // Initialised, but no permission is asked for here: prompting before the
+    // user has switched a reminder on is the fastest way to be refused.
+    await notifications.init();
+
+    // Loaded before the first frame so the theme, currency symbol and monthly
+    // boundary are correct on the very first paint.
     final settings = Get.put(
       SettingsController(
         Get.find<SettingsRepository>(),
         Get.find<AccountRepository>(),
+        Get.find<CategoryRepository>(),
         Get.find<CurrencyFormatter>(),
+        Get.find<AppLockService>(),
+        notifications,
+        Get.find<DataTransferService>(),
+        Get.find<AppEvents>(),
       ),
       permanent: true,
     );

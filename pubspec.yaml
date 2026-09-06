@@ -40,6 +40,13 @@ dependencies:
   sqflite: ^2.4.3
   path: ^1.9.1
 
+  # Device authentication for the app lock. The OS holds the credential —
+  # biometric or the device PIN — so this app never stores one.
+  local_auth: ^2.3.0
+
+  # Scheduled reminders for budgets, plans, goals and recurring transactions.
+  flutter_local_notifications: ^18.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
