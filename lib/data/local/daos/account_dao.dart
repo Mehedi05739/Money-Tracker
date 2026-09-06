@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/database/db_tables.dart';
+import '../account_balance.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../domain/entities/account.dart';
 import '../../models/account_mapper.dart';
@@ -63,11 +64,38 @@ class AccountDao {
     });
   }
 
-  Future<int> delete(int id) => _db.delete(
-    Tables.accounts,
-    where: '${AccountColumns.id} = ?',
-    whereArgs: [id],
-  );
+  /// Removes an account and everything that depended on it, atomically.
+  ///
+  /// Transactions *in* the account go with it — the schema cascades, and the
+  /// confirm dialog says so. Transfers *into* it are the awkward case: the
+  /// foreign key would only null their destination, leaving rows that still
+  /// claim to be transfers, still debit their source, and now point nowhere.
+  /// The source account's balance would stay reduced with nothing on screen to
+  /// explain where the money went.
+  ///
+  /// They are reclassified as expenses instead. The debit is identical — a
+  /// transfer and an expense both move the source by `-amount` — so no balance
+  /// changes, the row stays visible in the source account's history, and it now
+  /// says something true: the money left the accounts being tracked.
+  Future<int> delete(int id) {
+    return _db.transaction((txn) async {
+      await txn.rawUpdate(
+        'UPDATE ${Tables.transactions} '
+        "SET ${TransactionColumns.type} = 'expense', "
+        '    ${TransactionColumns.toAccountId} = NULL, '
+        '    ${TransactionColumns.updatedAt} = ? '
+        'WHERE ${TransactionColumns.toAccountId} = ? '
+        "  AND ${TransactionColumns.type} = 'transfer'",
+        [AppDate.toDb(DateTime.now()), id],
+      );
+
+      return txn.delete(
+        Tables.accounts,
+        where: '${AccountColumns.id} = ?',
+        whereArgs: [id],
+      );
+    });
+  }
 
   Future<int> setArchived(int id, bool archived) => _db.update(
     Tables.accounts,
@@ -113,12 +141,7 @@ class AccountDao {
         UPDATE ${Tables.accounts}
         SET ${AccountColumns.currentBalance} = ${AccountColumns.openingBalance}
           + COALESCE((
-              SELECT SUM(
-                CASE t.${TransactionColumns.type}
-                  WHEN 'income'  THEN  t.${TransactionColumns.amount}
-                  WHEN 'expense' THEN -t.${TransactionColumns.amount}
-                  ELSE                -t.${TransactionColumns.amount}
-                END)
+              SELECT SUM(${AccountBalance.sourceDeltaSql()})
               FROM ${Tables.transactions} t
               WHERE t.${TransactionColumns.accountId} = ${Tables.accounts}.${AccountColumns.id}
             ), 0)

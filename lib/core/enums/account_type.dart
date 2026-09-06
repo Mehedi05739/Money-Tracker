@@ -4,7 +4,8 @@ enum AccountType {
   card,
   wallet,
   savings,
-  investment;
+  investment,
+  other;
 
   static AccountType fromName(String? value) =>
       values.firstWhere((e) => e.name == value, orElse: () => AccountType.cash);
@@ -16,5 +17,6 @@ enum AccountType {
     AccountType.wallet => 'Mobile wallet',
     AccountType.savings => 'Savings',
     AccountType.investment => 'Investment',
+    AccountType.other => 'Other',
   };
 }

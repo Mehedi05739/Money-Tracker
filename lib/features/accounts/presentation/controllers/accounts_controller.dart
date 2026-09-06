@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import '../../../../core/base/base_controller.dart';
 import '../../../../core/events/app_events.dart';
 import '../../../../core/widgets/app_snackbar.dart';
+import '../../../transactions/presentation/controllers/transactions_controller.dart';
+import '../../../shell/presentation/controllers/shell_controller.dart';
+import '../../../../domain/repositories/transaction_repository.dart';
 import '../../../../domain/entities/account.dart';
 import '../../../../domain/repositories/account_repository.dart';
 
@@ -65,6 +68,21 @@ class AccountsController extends BaseController {
   void toggleArchived() {
     showArchived.toggle();
     load(showLoader: false);
+  }
+
+  /// Points the ledger at one account and switches to its tab.
+  ///
+  /// Leaves the actual pop to the caller: this screen sits above the shell, and
+  /// unwinding routes needs a `BuildContext` that belongs in the widget layer.
+  ///
+  /// Reuses the transactions tab rather than building a second list: the
+  /// filtering, grouping, paging and search already live there, and a private
+  /// copy would be a second place for that behaviour to drift.
+  void viewTransactions(Account account) {
+    Get.find<TransactionsController>().applyFilter(
+      TransactionFilter(accountIds: {account.id}),
+    );
+    Get.find<ShellController>().changeTab(ShellTabs.transactions);
   }
 
   Future<void> setArchived(Account account, bool archived) async {

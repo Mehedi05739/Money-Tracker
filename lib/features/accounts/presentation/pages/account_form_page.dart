@@ -59,11 +59,13 @@ class AccountFormPage extends GetView<AccountFormController> {
                     textStyle: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
-                Obx(() {
-                  if (controller.canEditOpeningBalance) {
-                    return const SizedBox.shrink();
-                  }
-                  return Padding(
+                // Not wrapped in Obx: `canEditOpeningBalance` is derived from
+                // whether the form opened for an edit, which is fixed for the
+                // life of the screen. An Obx around it reads no observable, and
+                // GetX treats that as an error rather than a no-op — it threw
+                // over the whole form, so no account could be created.
+                if (!controller.canEditOpeningBalance)
+                  Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
                       'Changing the opening balance shifts this account’s '
@@ -72,8 +74,7 @@ class AccountFormPage extends GetView<AccountFormController> {
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
-                  );
-                }),
+                  ),
                 AppSpacing.gapLg,
                 Text(
                   'Appearance',

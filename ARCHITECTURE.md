@@ -346,6 +346,61 @@ rows, the account list, budget statuses, the current plan (3), and goals.
 Everything starts together and is awaited in order, so it costs one round trip
 of wall time.
 
+## Accounts, balances and transfers
+
+An account carries a name, type, opening balance, current balance, currency,
+icon and colour. `current_balance` is owned by the ledger, not the edit form:
+`AccountDao.update` strips it, so renaming an account cannot rewrite its money,
+and the opening balance is locked once the account exists because changing it
+would shift every historical balance underneath the user.
+
+### One definition of the balance rule
+
+Balances are maintained two ways and both are needed: incrementally as each
+transaction is written, and rebuilt in bulk by `recalculateAll` — the repair
+path, and what an import uses instead of thousands of per-row updates.
+
+Those two used to encode the rule separately, Dart arithmetic on one side and a
+hand-written SQL `CASE` on the other, with nothing keeping them in step. A new
+transaction type or a changed `TransactionType.balanceSign` would have updated
+one and not the other, and the disagreement would only surface as a wrong
+balance *after* a repair — the operation meant to fix the ledger would have been
+the one that broke it.
+
+`data/local/account_balance.dart` is now the single definition.
+`AccountBalance.sourceDelta`/`destinationDelta` give the Dart form;
+`sourceDeltaSql` generates the `CASE` from the same `balanceSign`, so a new
+transaction type appears in both automatically.
+`test/data/account_balance_test.dart` holds the two paths to each other across
+every type, after edits and deletes, and asserts the generated SQL covers every
+enum value.
+
+### Transfers
+
+A transfer debits its source exactly as an expense would and credits its
+destination by the same amount, in one SQL transaction — so it nets to zero
+across the two accounts and changes no net worth. What makes it *not* an
+expense is that every reporting aggregate excludes `type = 'transfer'`, and the
+schema enforces the shape: a transfer must name a destination, and that
+destination cannot be the source account.
+
+Because the row and both balance updates share one transaction, a transfer that
+fails — a destination that no longer exists, say — moves neither balance and
+leaves no half-written row.
+
+### Deleting an account
+
+Transactions *in* the account go with it; the schema cascades and the confirm
+dialog says so. Transfers *into* it are the awkward case: the foreign key would
+only null their destination, leaving rows that still claim to be transfers,
+still debit their source, and now point nowhere — the other account's balance
+would stay reduced with nothing on screen to explain where the money went.
+
+They are reclassified as expenses in the same transaction as the delete. The
+debit is identical, so no balance moves, the row stays visible in the source
+account's history, and it now says something true: the money left the accounts
+being tracked.
+
 ## Recurring transactions
 
 A rule stores the commitment — title, amount, type, category, account,

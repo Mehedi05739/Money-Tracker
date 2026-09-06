@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/base/view_state.dart';
+import '../../../../core/utils/app_navigation.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_empty_view.dart';
@@ -224,6 +225,10 @@ class _AccountTile extends StatelessWidget {
             ),
             onSelected: (action) => _handle(action, context),
             itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'transactions',
+                child: Text('View transactions'),
+              ),
               PopupMenuItem(
                 value: 'archive',
                 child: Text(account.isArchived ? 'Restore' : 'Archive'),
@@ -237,6 +242,12 @@ class _AccountTile extends StatelessWidget {
   }
 
   Future<void> _handle(String action, BuildContext context) async {
+    if (action == 'transactions') {
+      controller.viewTransactions(account);
+      popToRoot(context);
+      return;
+    }
+
     if (action == 'archive') {
       await controller.setArchived(account, !account.isArchived);
       return;

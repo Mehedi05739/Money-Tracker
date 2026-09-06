@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/database/db_tables.dart';
+import '../account_balance.dart';
 import '../../../core/enums/transaction_sort.dart';
 import '../../../core/enums/transaction_type.dart';
 import '../../../domain/entities/analytics.dart';
@@ -298,7 +299,7 @@ class TransactionDao {
     int direction,
   ) async {
     final now = AppDate.toDb(DateTime.now());
-    final delta = transaction.amount * transaction.type.balanceSign * direction;
+    final delta = AccountBalance.sourceDelta(transaction) * direction;
 
     await txn.rawUpdate(
       'UPDATE ${Tables.accounts} '
@@ -309,13 +310,14 @@ class TransactionDao {
     );
 
     // A transfer credits the destination by the same amount it debited.
-    if (transaction.type.isTransfer && transaction.toAccountId != null) {
+    final destination = AccountBalance.destinationDelta(transaction);
+    if (destination != 0) {
       await txn.rawUpdate(
         'UPDATE ${Tables.accounts} '
         'SET ${AccountColumns.currentBalance} = ${AccountColumns.currentBalance} + ?, '
         '    ${AccountColumns.updatedAt} = ? '
         'WHERE ${AccountColumns.id} = ?',
-        [transaction.amount * direction, now, transaction.toAccountId],
+        [destination * direction, now, transaction.toAccountId],
       );
     }
   }

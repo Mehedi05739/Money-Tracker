@@ -20,3 +20,10 @@ import 'package:flutter/widgets.dart';
 /// the gap instead: `final navigator = Navigator.of(context);`
 void popRoute<T extends Object?>(BuildContext context, [T? result]) =>
     Navigator.of(context).pop<T>(result);
+
+/// Unwinds every pushed route, returning to the app shell.
+///
+/// Uses the same `Navigator` reasoning as [popRoute]: `Get.until` shares
+/// `Get.back()`'s snackbar early-return.
+void popToRoot(BuildContext context) =>
+    Navigator.of(context).popUntil((route) => route.isFirst);
