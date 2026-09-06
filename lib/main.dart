@@ -8,6 +8,7 @@ import 'core/utils/logger.dart';
 import 'core/widgets/app_snackbar.dart';
 import 'di/dependency_injection.dart';
 import 'domain/services/recurring_service.dart';
+import 'features/settings/presentation/controllers/settings_controller.dart';
 import 'features/startup/presentation/pages/startup_failure_page.dart';
 
 Future<void> main() async {
@@ -38,7 +39,12 @@ Future<bool> _startApp() async {
 
   // Catch up on recurring transactions after the first frame, so startup is
   // not blocked by a schedule with a lot of occurrences to post.
-  WidgetsBinding.instance.addPostFrameCallback((_) => _postRecurringDue());
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _postRecurringDue();
+    // Android drops pending alarms on reboot and force-stop, so the daily
+    // reminder is re-queued if it should exist but no longer does.
+    Get.find<SettingsController>().ensureDailyReminderScheduled();
+  });
   return true;
 }
 

@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <!-- Reminders for budgets, plans, goals and scheduled payments. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Lets the plugin re-queue the daily reminder after a restart. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:label="money_tracker"

@@ -92,6 +92,15 @@ class AppDatabase {
   /// connection, before any statement runs.
   Future<void> _onConfigure(Database db) async {
     await db.execute('PRAGMA foreign_keys = ON');
+
+    // The daily reminder's reply is handled in a background isolate, which
+    // opens its own connection to this same file while the app may still hold
+    // one. Without a busy timeout the second writer fails immediately with
+    // "database is locked"; five seconds is far longer than any write here
+    // takes, and only costs anything in the rare case of contention.
+    // `rawQuery`, not `execute`: this pragma returns the value it set, and
+    // Android's execSQL throws for any statement that returns rows.
+    await db.rawQuery('PRAGMA busy_timeout = 5000');
   }
 
   Future<void> _onCreate(Database db, int version) async {

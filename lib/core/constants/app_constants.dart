@@ -49,6 +49,11 @@ class SettingKeys {
   // with the operating system, so nothing sensitive reaches SQLite.
   static const String appLockEnabled = 'app_lock_enabled';
   static const String appLockBiometric = 'app_lock_biometric';
+
+  /// Daily "did you record today's spending?" reminder.
+  static const String dailyReminderEnabled = 'daily_reminder_enabled';
+  static const String dailyReminderHour = 'daily_reminder_hour';
+  static const String dailyReminderMinute = 'daily_reminder_minute';
 }
 
 /// Currencies offered in settings. Symbol is what every amount renders with.

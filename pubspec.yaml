@@ -44,8 +44,12 @@ dependencies:
   # biometric or the device PIN — so this app never stores one.
   local_auth: ^2.3.0
 
-  # Scheduled reminders for budgets, plans, goals and recurring transactions.
+  # Scheduled reminders. `timezone` is what lets a daily reminder fire at the
+  # user's 10pm rather than 10pm UTC; flutter_timezone reports which zone that
+  # actually is.
   flutter_local_notifications: ^18.0.1
+  timezone: ^0.10.0
+  flutter_timezone: ^4.1.1
 
 dev_dependencies:
   flutter_test:

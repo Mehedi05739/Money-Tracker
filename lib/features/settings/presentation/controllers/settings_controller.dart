@@ -5,6 +5,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/events/app_events.dart';
 import '../../../../core/services/app_lock_service.dart';
 import '../../../../core/services/currency_formatter.dart';
+import '../../../../core/services/daily_reminder.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/logger.dart';
@@ -59,6 +60,10 @@ class SettingsController extends GetxController {
     for (final kind in ReminderKind.values) kind: false,
   }.obs;
 
+  /// The daily "record today's spending" reminder.
+  final RxBool dailyReminderEnabled = false.obs;
+  final Rx<ReminderTime> dailyReminderTime = ReminderTime.defaultTime.obs;
+
   final RxBool appLockEnabled = false.obs;
   final RxBool preferBiometric = false.obs;
 
@@ -106,6 +111,13 @@ class SettingsController extends GetxController {
           for (final kind in ReminderKind.values)
             kind: values[_reminderKey(kind)] == 'true',
         });
+
+        dailyReminderEnabled.value =
+            values[SettingKeys.dailyReminderEnabled] == 'true';
+        dailyReminderTime.value = ReminderTime.parse(
+          values[SettingKeys.dailyReminderHour],
+          values[SettingKeys.dailyReminderMinute],
+        );
 
         appLockEnabled.value = values[SettingKeys.appLockEnabled] == 'true';
         preferBiometric.value = values[SettingKeys.appLockBiometric] == 'true';
@@ -254,6 +266,62 @@ class SettingsController extends GetxController {
     reminders[kind] = true;
     await _persist(_reminderKey(kind), 'true');
     return true;
+  }
+
+  /// Turns the daily reminder on or off.
+  ///
+  /// Returns false when notification permission was refused, so the UI can say
+  /// the switch did not take rather than showing an "on" toggle that will never
+  /// fire.
+  Future<bool> setDailyReminder(bool enabled) async {
+    if (!enabled) {
+      dailyReminderEnabled.value = false;
+      await _notifications.cancelDailyReminder();
+      await _persist(SettingKeys.dailyReminderEnabled, 'false');
+      return true;
+    }
+
+    final granted = await _notifications.requestPermission();
+    if (!granted) {
+      dailyReminderEnabled.value = false;
+      return false;
+    }
+
+    final scheduled = await _notifications.scheduleDailyReminder(
+      dailyReminderTime.value,
+    );
+    if (!scheduled) {
+      dailyReminderEnabled.value = false;
+      return false;
+    }
+
+    dailyReminderEnabled.value = true;
+    await _persist(SettingKeys.dailyReminderEnabled, 'true');
+    return true;
+  }
+
+  /// Moves the reminder to a new time, re-scheduling if it is on.
+  Future<void> setDailyReminderTime(ReminderTime time) async {
+    dailyReminderTime.value = time;
+    await _persist(SettingKeys.dailyReminderHour, '${time.hour}');
+    await _persist(SettingKeys.dailyReminderMinute, '${time.minute}');
+
+    if (dailyReminderEnabled.value) {
+      await _notifications.scheduleDailyReminder(time);
+    }
+  }
+
+  /// Re-queues the reminder every launch, if it is switched on.
+  ///
+  /// Deliberately unconditional. The plugin can report a reminder as "pending"
+  /// from its own persisted list long after Android has dropped the actual
+  /// alarm — a force-stop or reboot clears the alarm but not the list — so
+  /// checking first made the repair skip exactly when it was needed, and the
+  /// reminder silently stopped arriving. Re-scheduling is idempotent: the same
+  /// notification id replaces whatever was queued.
+  Future<void> ensureDailyReminderScheduled() async {
+    if (!dailyReminderEnabled.value) return;
+    await _notifications.scheduleDailyReminder(dailyReminderTime.value);
   }
 
   /// Reads what the device can actually do, so Security can be shown honestly.

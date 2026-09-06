@@ -1,6 +1,10 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:timezone/data/latest_all.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
 
 import '../utils/logger.dart';
+import 'daily_reminder.dart';
 
 /// The reminders the app can raise.
 ///
@@ -50,8 +54,33 @@ class NotificationService {
     iOS: DarwinNotificationDetails(),
   );
 
-  Future<void> init() async {
+  /// Identifiers for the daily reminder and its reply action.
+  ///
+  /// A fixed id so re-scheduling replaces the pending reminder rather than
+  /// leaving yesterday's queued alongside today's.
+  static const int dailyReminderId = 900;
+  static const String logExpenseActionId = 'log_expense';
+  static const String amountInputKey = 'amount';
+
+  Future<void> init({
+    DidReceiveBackgroundNotificationResponseCallback? onBackgroundResponse,
+    DidReceiveNotificationResponseCallback? onForegroundResponse,
+  }) async {
     try {
+      // Scheduling needs a real zone, or a "10pm" reminder fires at 10pm UTC.
+      tz_data.initializeTimeZones();
+      try {
+        tz.setLocalLocation(
+          tz.getLocation(await FlutterTimezone.getLocalTimezone()),
+        );
+      } catch (error) {
+        // An unknown zone name should degrade to UTC, not stop notifications.
+        AppLogger.w(
+          'Falling back to UTC: ${error.runtimeType}',
+          name: 'NOTIFY',
+        );
+      }
+
       final initialised = await _plugin.initialize(
         const InitializationSettings(
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
@@ -61,6 +90,8 @@ class NotificationService {
             requestSoundPermission: false,
           ),
         ),
+        onDidReceiveNotificationResponse: onForegroundResponse,
+        onDidReceiveBackgroundNotificationResponse: onBackgroundResponse,
       );
       _ready = initialised ?? false;
     } catch (error) {
@@ -104,6 +135,78 @@ class NotificationService {
         name: 'NOTIFY',
       );
       return false;
+    }
+  }
+
+  /// Schedules the daily "record today's spending" reminder.
+  ///
+  /// Repeats every day at [time] via `DateTimeComponents.time`, so it survives
+  /// without the app running. Deliberately **inexact**: an exact alarm needs
+  /// `SCHEDULE_EXACT_ALARM`, which Android treats as a high-privilege
+  /// permission, and a nudge to log expenses does not need to land on the
+  /// second.
+  Future<bool> scheduleDailyReminder(ReminderTime time) async {
+    if (!_ready) return false;
+
+    try {
+      await _plugin.zonedSchedule(
+        dailyReminderId,
+        'Record today’s spending',
+        'Tap to add an expense, or reply with just the amount.',
+        tz.TZDateTime.from(time.nextOccurrence(), tz.local),
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'money_tracker_daily',
+            'Daily reminder',
+            channelDescription: 'A daily nudge to record the day’s spending',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+            actions: const <AndroidNotificationAction>[
+              // Free-form input turns the notification itself into the fastest
+              // way to record a figure — no app launch, no form.
+              AndroidNotificationAction(
+                logExpenseActionId,
+                'Add expense',
+                allowGeneratedReplies: false,
+                inputs: <AndroidNotificationActionInput>[
+                  AndroidNotificationActionInput(label: 'Amount'),
+                ],
+                // The reply is handled without bringing the app forward.
+                showsUserInterface: false,
+                cancelNotification: true,
+              ),
+            ],
+          ),
+          iOS: const DarwinNotificationDetails(
+            categoryIdentifier: 'daily_reminder',
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        // The stored time is a wall clock, so it should mean 10pm wherever the
+        // user is, not a fixed instant computed once.
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.wallClockTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      return true;
+    } catch (error) {
+      AppLogger.w(
+        'Could not schedule the daily reminder: ${error.runtimeType}',
+        name: 'NOTIFY',
+      );
+      return false;
+    }
+  }
+
+  Future<void> cancelDailyReminder() async {
+    if (!_ready) return;
+    try {
+      await _plugin.cancel(dailyReminderId);
+    } catch (error) {
+      AppLogger.w(
+        'Could not cancel reminder: ${error.runtimeType}',
+        name: 'NOTIFY',
+      );
     }
   }
 

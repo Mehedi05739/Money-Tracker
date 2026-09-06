@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/services/daily_reminder.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_utils.dart';
@@ -122,6 +123,35 @@ class SettingsPage extends GetView<SettingsController> {
             ),
             _Group(
               children: [
+                Obx(
+                  () => SwitchListTile.adaptive(
+                    value: controller.dailyReminderEnabled.value,
+                    onChanged: _toggleDailyReminder,
+                    title: const Text('Daily expense reminder'),
+                    subtitle: Text(
+                      'A nudge to record the day’s spending. Reply to it with '
+                      'just an amount to add an expense without opening the '
+                      'app.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    dense: true,
+                  ),
+                ),
+                Obx(
+                  () => _Tile(
+                    icon: Icons.schedule_rounded,
+                    title: 'Reminder time',
+                    subtitle: controller.dailyReminderEnabled.value
+                        ? 'Every day at '
+                              '${controller.dailyReminderTime.value.label}'
+                        : 'Turn the reminder on to set a time',
+                    onTap: controller.dailyReminderEnabled.value
+                        ? () => _pickReminderTime(context)
+                        : null,
+                  ),
+                ),
                 for (final kind in ReminderKind.values)
                   Obx(
                     () => SwitchListTile.adaptive(
@@ -416,6 +446,40 @@ class SettingsPage extends GetView<SettingsController> {
     ReminderKind.goal => 'Progress towards your savings goals',
     ReminderKind.recurring => 'When a scheduled payment is due',
   };
+
+  Future<void> _toggleDailyReminder(bool value) async {
+    final applied = await controller.setDailyReminder(value);
+    if (!applied) {
+      AppSnackbar.info(
+        'Allow notifications for Money Tracker in your device settings to use '
+        'reminders',
+      );
+      return;
+    }
+    AppSnackbar.success(
+      value
+          ? 'Reminder set for ${controller.dailyReminderTime.value.label} '
+                'every day'
+          : 'Daily reminder turned off',
+    );
+  }
+
+  Future<void> _pickReminderTime(BuildContext context) async {
+    final current = controller.dailyReminderTime.value;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: current.hour, minute: current.minute),
+      helpText: 'Remind me at',
+    );
+    if (picked == null) return;
+
+    await controller.setDailyReminderTime(
+      ReminderTime(picked.hour, picked.minute),
+    );
+    AppSnackbar.success(
+      'Reminder moved to ${controller.dailyReminderTime.value.label}',
+    );
+  }
 
   Future<void> _toggleReminder(ReminderKind kind, bool value) async {
     final applied = await controller.setReminder(kind, value);

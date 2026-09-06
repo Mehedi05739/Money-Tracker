@@ -9,6 +9,7 @@ import '../core/events/app_events.dart';
 import '../core/services/currency_formatter.dart';
 import '../domain/services/data_transfer_service.dart';
 import '../core/services/notification_service.dart';
+import '../core/services/quick_entry_handler.dart';
 import '../core/services/app_lock_service.dart';
 import '../data/local/daos/account_dao.dart';
 import '../data/local/daos/analytics_dao.dart';
@@ -146,7 +147,13 @@ class DependencyInjection {
     );
     // Initialised, but no permission is asked for here: prompting before the
     // user has switched a reminder on is the fastest way to be refused.
-    await notifications.init();
+    //
+    // The background callback is what lets a reply to the daily reminder be
+    // recorded while the app is closed.
+    await notifications.init(
+      onBackgroundResponse: onNotificationReplyBackground,
+      onForegroundResponse: onNotificationReplyForeground,
+    );
 
     // Loaded before the first frame so the theme, currency symbol and monthly
     // boundary are correct on the very first paint.
