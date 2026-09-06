@@ -6,6 +6,7 @@ import '../../../../core/events/app_events.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../domain/services/data_transfer_service.dart';
+import '../../../../domain/services/import_validation.dart';
 
 /// Drives the Data screen.
 ///
@@ -20,6 +21,17 @@ class DataController extends GetxController {
 
   final RxBool isBusy = false.obs;
   final RxList<File> files = <File>[].obs;
+
+  /// The step a running transfer is on, or null when idle. Drives the progress
+  /// bar; a long import over a big ledger otherwise looks like a hang.
+  final Rxn<TransferProgress> progress = Rxn<TransferProgress>();
+
+  /// What the last transfer produced, kept so the screen can show a result
+  /// rather than a snackbar the user may have missed.
+  final Rxn<DataTransferResult> lastResult = Rxn<DataTransferResult>();
+
+  /// Problems from the last rejected import file, listed for the user.
+  final RxList<ImportProblem> lastProblems = <ImportProblem>[].obs;
 
   @override
   void onInit() {
@@ -42,7 +54,7 @@ class DataController extends GetxController {
       _service.listFiles(backups: backups);
 
   Future<void> exportData() => _run(
-    action: _service.exportToJson,
+    action: () => _service.exportToJson(onProgress: _report),
     describe: (result) =>
         'Exported ${result.recordCount} records to ${result.fileName}',
   );
@@ -52,21 +64,51 @@ class DataController extends GetxController {
     describe: (result) => 'Backed up to ${result.fileName}',
   );
 
-  /// Replaces every record. Emits a change for each data kind afterwards, so
-  /// screens the shell is keeping alive reload rather than showing the ledger
-  /// that existed a moment ago.
-  Future<void> importData(String path) => _run(
-    action: () => _service.importFromJson(path),
-    describe: (result) => 'Imported ${result.recordCount} records',
+  /// Reads a file and reports what it holds, without writing anything.
+  ///
+  /// Lets the user see what they are about to import — and be told exactly
+  /// what is wrong with a bad file — before any confirmation is asked for.
+  Future<ImportPayload?> inspect(String path) async {
+    lastProblems.clear();
+    // Clear the previous run's outcome too, or a failed inspection leaves a
+    // stale "Finished" card sitting under the error.
+    lastResult.value = null;
+    try {
+      return await _service.inspect(path);
+    } on ImportValidationException catch (error) {
+      lastProblems.assignAll(error.problems);
+      AppSnackbar.error(error.summary);
+      return null;
+    } catch (error) {
+      AppLogger.w('Could not read file: ${error.runtimeType}', name: 'DATA');
+      AppSnackbar.error('That file could not be read');
+      return null;
+    }
+  }
+
+  /// Loads a file. Emits a change for each data kind afterwards, so screens the
+  /// shell is keeping alive reload rather than showing the ledger that existed
+  /// a moment ago.
+  Future<void> importData(String path, {required ImportMode mode}) => _run(
+    action: () =>
+        _service.importFromJson(path, mode: mode, onProgress: _report),
+    describe: (result) => result.replaced
+        ? 'Replaced everything with ${result.added} records'
+        : result.reused > 0
+        ? 'Added ${result.added} records, matched ${result.reused} you '
+              'already had'
+        : 'Added ${result.added} records',
     invalidatesEverything: true,
   );
 
   Future<void> restore(String path) => _run(
-    action: () => _service.restore(path),
+    action: () => _service.restore(path, onProgress: _report),
     describe: (result) =>
-        'Restored ${result.recordCount} transactions from ${result.fileName}',
+        'Restored ${result.recordCount} records from ${result.fileName}',
     invalidatesEverything: true,
   );
+
+  void _report(TransferProgress value) => progress.value = value;
 
   Future<void> deleteFile(File file) async {
     try {
@@ -86,12 +128,18 @@ class DataController extends GetxController {
   }) async {
     if (isBusy.value) return;
     isBusy.value = true;
+    lastResult.value = null;
+    lastProblems.clear();
 
     try {
       final result = await action();
       if (invalidatesEverything) _emitAll();
       await refreshFiles();
+      lastResult.value = result;
       AppSnackbar.success(describe(result));
+    } on ImportValidationException catch (error) {
+      lastProblems.assignAll(error.problems);
+      AppSnackbar.error(error.summary);
     } on FormatException catch (error) {
       // The message here describes the file, not the user's data, so it is
       // safe to show.
@@ -101,6 +149,7 @@ class DataController extends GetxController {
       AppSnackbar.error('That did not work. Your data is unchanged.');
     } finally {
       isBusy.value = false;
+      progress.value = null;
     }
   }
 

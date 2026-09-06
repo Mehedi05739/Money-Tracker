@@ -387,29 +387,64 @@ screen is a public surface.
 
 ### Data
 
-Export is JSON: readable, inspectable, portable. Backup is a byte copy of the
-SQLite file: exact, including schema version. They answer different questions,
-so both exist.
+Export is JSON, described by `ExportSchema` rather than being "whatever the
+tables happen to hold". The file has a contract: which groups it carries, what
+each record must have, and how records point at each other. Backup is a byte
+copy of the SQLite file — exact, including schema version. They answer
+different questions, so both exist.
+
+The export carries the nine record groups plus preferences as a key–value map.
+It deliberately omits `recurring_occurrences`: that is internal bookkeeping
+about which schedule runs have been posted, not the user's financial data. It
+still has to exist afterwards, or the next catch-up would treat every
+already-posted occurrence as unprocessed — so it is rebuilt from the imported
+transactions, the same way migration v3 backfills it.
 
 Files are written beside the database, derived from the open connection's path
 rather than the global `databaseFactory`, which is process-wide state anything
 can reassign — a file written to one directory and looked for in another is a
 backup the user cannot find.
 
-**Restore copies contents rather than swapping the file.** The obvious
-implementation — close, copy over, reopen — does not work: every DAO holds the
-`Database` handle resolved at startup, so reopening leaves them all pointing at
-a closed connection and the next query anywhere in the app fails with
-`database_closed`. The backup is opened on its own read-only connection and its
-rows copied into the live one inside a single transaction, which keeps that
-connection valid and makes a failed restore leave the current data untouched.
-Preferences are not part of a restore: it should bring back the ledger, not
-silently change the theme.
+#### Importing without losing anything
+
+Validation happens entirely before the first row is written. Structure, format
+version, required fields and every cross-reference are checked in one pass, and
+*all* problems are reported rather than the first — "transactions, record 12:
+missing amount" is something a user can act on, "invalid file" is not. Checking
+up front matters most in replace mode: a file that failed halfway would already
+have deleted the user's data, and rolling back is a worse answer than never
+starting.
+
+Import has two modes, and **merge is the default**. Merge renumbers incoming
+ids and rewrites every link to match, so nothing already present is touched;
+where a group has a natural identity — accounts and categories, by name and
+type — the existing record is reused rather than duplicated, because importing
+a file that also has a "Groceries" category must not leave the user with two.
+Transactions have no natural identity, so they are never matched: two
+same-day, same-amount coffees really are two coffees, and collapsing them would
+lose data. Replace deletes first and is reachable only through a typed
+confirmation.
+
+The whole write is one SQL transaction, so a failure keeps nothing — including,
+in replace mode, the deletion that would otherwise already have destroyed the
+ledger.
+
+Long transfers report progress per group, so a large import shows a bar rather
+than looking like a hang, and the screen keeps the outcome — records added,
+records matched, or the list of problems — instead of a snackbar the user may
+have missed.
 
 Destructive actions go through `DangerDialog`, which requires typing a word
 before the button enables, states plainly what disappears, and is not
 dismissible by tapping away. A single tap is too easy to give by reflex, and
 there is no undo behind it — the ledger is the only copy.
+
+**Restore copies contents rather than swapping the file.** The obvious
+implementation — close, copy over, reopen — does not work: every DAO holds the
+`Database` handle resolved at startup, so reopening leaves them all pointing at
+a closed connection and the next query anywhere in the app fails with
+`database_closed`. The backup is opened on its own read-only connection and its
+rows copied into the live one inside a single transaction.
 
 ## Accounts, balances and transfers
 

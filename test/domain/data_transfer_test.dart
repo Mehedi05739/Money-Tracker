@@ -8,6 +8,8 @@ import 'package:money_tracker/core/database/db_tables.dart';
 import 'package:money_tracker/data/local/daos/transaction_dao.dart';
 import 'package:money_tracker/domain/entities/money_transaction.dart';
 import 'package:money_tracker/domain/services/data_transfer_service.dart';
+import 'package:money_tracker/domain/services/export_schema.dart';
+import 'package:money_tracker/domain/services/import_validation.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Export, import, backup and restore all move the user's only copy of their
@@ -72,15 +74,16 @@ void main() {
 
       final decoded =
           jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
-      expect(
-        decoded['format_version'],
-        DataTransferService.exportFormatVersion,
-      );
-      final tables = decoded['tables']! as Map<String, Object?>;
-      for (final table in DataTransferService.exportedTables) {
-        expect(tables.containsKey(table), isTrue, reason: '$table missing');
+      expect(decoded['format_version'], ExportSchema.formatVersion);
+      final data = decoded[ExportSchema.dataKey]! as Map<String, Object?>;
+      for (final group in ExportSchema.groups) {
+        expect(
+          data.containsKey(group.key),
+          isTrue,
+          reason: '\${group.key} missing',
+        );
       }
-      expect((tables[Tables.transactions]! as List), hasLength(1));
+      expect((data['transactions']! as List), hasLength(1));
     });
 
     test('round-trips through import', () async {
@@ -90,7 +93,7 @@ void main() {
       await addTransaction(amount: 999, title: 'Added after the export');
       expect(await transactionCount(), 2);
 
-      await service.importFromJson(exported.path);
+      await service.importFromJson(exported.path, mode: ImportMode.replace);
 
       expect(
         await transactionCount(),
@@ -105,8 +108,11 @@ void main() {
   group('import rejects a file it cannot trust', () {
     test('a missing file', () async {
       await expectLater(
-        service.importFromJson('${workDir.path}/nope.json'),
-        throwsA(isA<FormatException>()),
+        service.importFromJson(
+          '${workDir.path}/nope.json',
+          mode: ImportMode.replace,
+        ),
+        throwsA(isA<ImportValidationException>()),
       );
     });
 
@@ -114,17 +120,19 @@ void main() {
       final file = File('${workDir.path}/junk.json')
         ..writeAsStringSync('[1, 2, 3]');
       await expectLater(
-        service.importFromJson(file.path),
-        throwsA(isA<FormatException>()),
+        service.importFromJson(file.path, mode: ImportMode.replace),
+        throwsA(isA<ImportValidationException>()),
       );
     });
 
     test('an export from another format version', () async {
       final file = File('${workDir.path}/old.json')
-        ..writeAsStringSync(jsonEncode({'format_version': 99, 'tables': {}}));
+        ..writeAsStringSync(
+          jsonEncode({'format_version': 99, 'data': <String, Object?>{}}),
+        );
       await expectLater(
-        service.importFromJson(file.path),
-        throwsA(isA<FormatException>()),
+        service.importFromJson(file.path, mode: ImportMode.replace),
+        throwsA(isA<ImportValidationException>()),
       );
     });
 
@@ -133,10 +141,12 @@ void main() {
       final before = await transactionCount();
 
       final file = File('${workDir.path}/bad.json')
-        ..writeAsStringSync(jsonEncode({'format_version': 99, 'tables': {}}));
+        ..writeAsStringSync(
+          jsonEncode({'format_version': 99, 'data': <String, Object?>{}}),
+        );
       await expectLater(
-        service.importFromJson(file.path),
-        throwsA(isA<FormatException>()),
+        service.importFromJson(file.path, mode: ImportMode.replace),
+        throwsA(isA<ImportValidationException>()),
       );
 
       expect(await transactionCount(), before);

@@ -8,11 +8,15 @@ import 'package:path/path.dart' as p;
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_progress_bar.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/danger_dialog.dart';
 import '../../../../core/widgets/section_header.dart';
+import '../../../../domain/services/data_transfer_service.dart';
+import '../../../../domain/services/import_validation.dart';
 import '../controllers/data_controller.dart';
 
 /// Export, import, backup and restore.
@@ -45,6 +49,22 @@ class DataPage extends GetView<DataController> {
                 ),
               ),
 
+              if (controller.progress.value case final step?)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: _ProgressCard(step: step),
+                ),
+              if (controller.lastProblems.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: _ProblemsCard(problems: controller.lastProblems),
+                ),
+              if (controller.lastResult.value case final result?)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: _ResultCard(result: result),
+                ),
+
               const SectionHeader(title: 'Export'),
               _ActionCard(
                 icon: Icons.description_outlined,
@@ -58,7 +78,8 @@ class DataPage extends GetView<DataController> {
               _ActionCard(
                 icon: Icons.upload_file_outlined,
                 title: 'Import data',
-                subtitle: 'Replaces everything with the contents of an export',
+                subtitle:
+                    'Adds an export to your data, or replaces it — you choose',
                 busy: controller.isBusy.value,
                 onTap: () => _pickAndImport(context),
               ),
@@ -111,17 +132,109 @@ class DataPage extends GetView<DataController> {
     );
     if (file == null) return;
 
-    final confirmed = await DangerDialog.show(
-      title: 'Replace all data?',
-      message:
-          'Everything currently in the app is deleted and replaced with the '
-          'contents of ${p.basename(file.path)}.',
-      confirmWord: 'REPLACE',
-      confirmLabel: 'Replace everything',
-    );
-    if (!confirmed) return;
+    // Read and validate before asking anything: a bad file should be reported
+    // as bad, not confirmed and then rejected.
+    final payload = await controller.inspect(file.path);
+    if (payload == null || !context.mounted) return;
 
-    await controller.importData(file.path);
+    final mode = await _chooseImportMode(context, file, payload);
+    if (mode == null || !context.mounted) return;
+
+    // Merge adds without touching what is there, so it needs no scare dialog.
+    // Replace destroys data, so it gets the full typed confirmation.
+    if (mode == ImportMode.replace) {
+      final confirmed = await DangerDialog.show(
+        title: 'Replace all data?',
+        message:
+            'Everything currently in the app is deleted and replaced with the '
+            'contents of ${p.basename(file.path)}.',
+        confirmWord: 'REPLACE',
+        confirmLabel: 'Replace everything',
+      );
+      if (!confirmed) return;
+    }
+
+    await controller.importData(file.path, mode: mode);
+  }
+
+  /// Asks how the file should meet the data already there.
+  ///
+  /// Presented as a real choice with merge first and preselected: an import
+  /// that silently overwrote a ledger would be the worst bug this app could
+  /// have, so replacing has to be something the user picks deliberately.
+  Future<ImportMode?> _chooseImportMode(
+    BuildContext context,
+    File file,
+    ImportPayload payload,
+  ) {
+    final theme = Theme.of(context);
+
+    return showModalBottomSheet<ImportMode>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+              child: Text('Import', style: theme.textTheme.titleMedium),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(
+                _describePayload(payload),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.merge_rounded),
+              title: const Text('Add to my data'),
+              subtitle: const Text(
+                'Keeps everything you have. Records you already have are '
+                'matched, not duplicated.',
+              ),
+              onTap: () => Navigator.of(sheetContext).pop(ImportMode.merge),
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.swap_horiz_rounded,
+                color: theme.colorScheme.error,
+              ),
+              title: Text(
+                'Replace my data',
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+              subtitle: const Text(
+                'Deletes everything currently in the app first',
+              ),
+              onTap: () => Navigator.of(sheetContext).pop(ImportMode.replace),
+            ),
+            AppSpacing.gapMd,
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _describePayload(ImportPayload payload) {
+    final parts = <String>[];
+    payload.records.forEach((key, rows) {
+      if (rows.isNotEmpty) {
+        parts.add('${rows.length} ${key.replaceAll('_', ' ')}');
+      }
+    });
+    if (payload.settings.isNotEmpty) {
+      parts.add('${payload.settings.length} preferences');
+    }
+    final made = payload.exportedAt;
+    final when = made == null ? '' : ' · exported ${AppDate.formatDate(made)}';
+    return parts.isEmpty
+        ? 'This file has no records$when'
+        : '${parts.join(', ')}$when';
   }
 
   Future<void> _pickAndRestore(BuildContext context) async {
@@ -330,5 +443,161 @@ class _FileCard extends StatelessWidget {
           'data is not affected.',
     );
     if (confirmed) await Get.find<DataController>().deleteFile(file);
+  }
+}
+
+/// What a running transfer is doing, and how far through it is.
+class _ProgressCard extends StatelessWidget {
+  const _ProgressCard({required this.step});
+
+  final TransferProgress step;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(step.label, style: theme.textTheme.titleSmall),
+              ),
+              Text(
+                '${(step.fraction * 100).toStringAsFixed(0)}%',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          AppSpacing.gapSm,
+          // Determinate: a spinner says "wait", a bar says how long for.
+          AppProgressBar(
+            value: step.fraction,
+            color: theme.colorScheme.primary,
+            height: 6,
+            warningThreshold: 2,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The outcome of the last transfer.
+class _ResultCard extends StatelessWidget {
+  const _ResultCard({required this.result});
+
+  final DataTransferResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AppCard(
+      child: Row(
+        children: [
+          Icon(Icons.check_circle_outline_rounded, color: context.incomeColor),
+          AppSpacing.hGapMd,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Finished', style: theme.textTheme.titleSmall),
+                AppSpacing.gapXxs,
+                Text(
+                  _describe(),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _describe() {
+    if (result.added == 0 && result.reused == 0) {
+      return '${result.recordCount} records · ${result.fileName}';
+    }
+    final reused = result.reused == 0
+        ? ''
+        : ' · ${result.reused} already existed and were matched';
+    return '${result.added} records added$reused';
+  }
+}
+
+/// Why an import file was refused, listed rather than summarised.
+///
+/// "Invalid file" is not something a user can act on; "transactions, record 12:
+/// missing amount" is.
+class _ProblemsCard extends StatelessWidget {
+  const _ProblemsCard({required this.problems});
+
+  final List<ImportProblem> problems;
+
+  /// Enough to find the pattern without turning the screen into a wall of text.
+  static const int _shown = 8;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hidden = problems.length - _shown;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.error_outline_rounded, color: theme.colorScheme.error),
+              AppSpacing.hGapMd,
+              Expanded(
+                child: Text(
+                  problems.length == 1
+                      ? 'That file could not be imported'
+                      : 'That file could not be imported '
+                            '(${problems.length} problems)',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          AppSpacing.gapSm,
+          for (final problem in problems.take(_shown))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Text(
+                '• $problem',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          if (hidden > 0)
+            Text(
+              'and $hidden more',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          AppSpacing.gapSm,
+          Text(
+            'Nothing was changed.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
