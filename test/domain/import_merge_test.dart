@@ -278,6 +278,37 @@ void main() {
       expect(await countOf(Tables.transactions), 2);
     });
 
+    test('leaves account balances matching the ledger', () async {
+      // Imported rows are written straight to the table, so none of the
+      // per-row balance maintenance runs. Without a rebuild at the end, every
+      // account silently disagrees with its own transactions.
+      await addTransaction(amount: 100);
+      await service.importFromJson(writeFile('ok.json', validExport()));
+
+      final accounts = await database.db.query(Tables.accounts);
+      for (final account in accounts) {
+        final id = account['id']! as int;
+        final rows = await database.db.rawQuery(
+          '''
+          SELECT opening_balance
+            + COALESCE((SELECT SUM(CASE type WHEN 'income' THEN amount
+                                             ELSE -amount END)
+                        FROM transactions WHERE account_id = ?), 0)
+            + COALESCE((SELECT SUM(amount)
+                        FROM transactions WHERE to_account_id = ?), 0)
+            AS expected
+          FROM accounts WHERE id = ?
+          ''',
+          [id, id, id],
+        );
+        expect(
+          (account['current_balance']! as num).toDouble(),
+          closeTo((rows.first['expected']! as num).toDouble(), 0.001),
+          reason: 'account $id does not match its own ledger',
+        );
+      }
+    });
+
     test('brings preferences across', () async {
       await service.importFromJson(writeFile('ok.json', validExport()));
 

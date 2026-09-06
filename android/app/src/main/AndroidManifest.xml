@@ -38,6 +38,36 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- flutter_local_notifications declares no receivers of its own, so
+             the app must register them. Without these the plugin's code runs
+             but nothing reaches the system: a scheduled alarm wakes a receiver
+             Android will not deliver to, and a notification reply never gets
+             dispatched to Dart. -->
+
+        <!-- Posts a notification when its scheduled time arrives. -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+
+        <!-- Dispatches notification actions — including the reply typed into
+             the daily reminder — to the Dart callback. -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+
+        <!-- Re-queues schedules after a reboot or an app update, which
+             otherwise clear every pending alarm. -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

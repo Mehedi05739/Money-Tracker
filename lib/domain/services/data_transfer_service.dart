@@ -10,6 +10,7 @@ import '../../core/database/db_tables.dart';
 import '../../core/database/migrations.dart';
 import '../../core/utils/date_utils.dart';
 import '../../core/utils/logger.dart';
+import '../../data/local/daos/account_dao.dart';
 import 'export_schema.dart';
 import 'import_validation.dart';
 
@@ -296,6 +297,13 @@ class DataTransferService {
         ),
       );
       await _rebuildOccurrenceLedger(txn);
+
+      // Imported transactions are written straight to the table, so none of
+      // the per-row balance maintenance ran. Without this every account keeps
+      // whatever balance it had and silently disagrees with its own ledger —
+      // in merge mode the accounts are reused, so they end up short by exactly
+      // the imported spending.
+      await AccountDao.recalculateWithin(txn);
     });
 
     onProgress?.call(
@@ -486,6 +494,10 @@ class DataTransferService {
             records++;
           }
         }
+        // The backup carries its own balances, but rebuilding them costs one
+        // statement and removes any doubt that they match the rows restored
+        // alongside them.
+        await AccountDao.recalculateWithin(txn);
       });
     } on FormatException {
       rethrow;

@@ -135,7 +135,17 @@ class AccountDao {
   /// Rebuilds every balance from the ledger. Used as a repair action and after
   /// bulk imports, where per-row maintenance would be wasteful.
   Future<void> recalculateAll() async {
-    await _db.transaction((txn) async {
+    await _db.transaction(recalculateWithin);
+  }
+
+  /// The same rebuild, inside a transaction the caller already opened.
+  ///
+  /// An import writes transaction rows directly rather than through
+  /// [TransactionDao], so no balance maintenance runs as it goes. It has to
+  /// finish by rebuilding balances, in the same transaction, or every account
+  /// is left showing a figure that no longer matches its own ledger.
+  static Future<void> recalculateWithin(DatabaseExecutor txn) async {
+    {
       await txn.rawUpdate(
         '''
         UPDATE ${Tables.accounts}
@@ -154,6 +164,6 @@ class AccountDao {
       ''',
         [AppDate.toDb(DateTime.now())],
       );
-    });
+    }
   }
 }

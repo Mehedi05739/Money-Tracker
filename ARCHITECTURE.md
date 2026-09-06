@@ -385,6 +385,40 @@ is declined the toggle returns to off rather than showing an "on" switch that
 will never fire. Notification bodies deliberately carry no amounts — a lock
 screen is a public surface.
 
+**The plugin declares no Android receivers of its own.** The app's manifest
+must register `ScheduledNotificationReceiver` (posts a notification when its
+time arrives), `ActionBroadcastReceiver` (dispatches a notification action to
+Dart) and `ScheduledNotificationBootReceiver` (re-queues schedules after a
+reboot). Without them the Dart side looks correct and fails silently: the alarm
+registers and its receiver is even woken, but Android will not deliver to an
+undeclared component, so nothing is posted and no reply reaches the callback.
+
+#### The daily expense reminder
+
+A reminder at a time the user picks, defaulting to 10pm, repeating daily via
+`DateTimeComponents.time` so it survives without the app running. `ReminderTime`
+owns the next-occurrence arithmetic — strictly in the future, since scheduling
+an instant that has already passed makes some Android versions fire it
+immediately — and is re-queued at every launch, unconditionally. The plugin can
+report a reminder as "pending" from its own persisted list long after Android
+dropped the actual alarm, so checking first made the repair skip exactly when
+it was needed.
+
+The notification carries a free-form reply action, which is what makes it
+faster than opening the app: an amount typed into the tray is recorded straight
+away. That reply is handled in a **background isolate** with nothing from the
+running app reachable — no GetX bindings, no open database — so
+`QuickEntryHandler` opens its own connection, reads the default account and
+category from settings, and writes through `TransactionDao` rather than raw SQL
+so the balance moves by exactly the same rule as every other write. The database
+sets a `busy_timeout` because that isolate may open the file while the app still
+holds it.
+
+`QuickAmount` is forgiving about how people type money — a symbol, a comma,
+trailing words — but rejects anything that is not a positive, sane number
+rather than guessing, because the alternative is silently recording the wrong
+figure in someone's ledger.
+
 ### Data
 
 Export is JSON, described by `ExportSchema` rather than being "whatever the
@@ -399,6 +433,11 @@ about which schedule runs have been posted, not the user's financial data. It
 still has to exist afterwards, or the next catch-up would treat every
 already-posted occurrence as unprocessed — so it is rebuilt from the imported
 transactions, the same way migration v3 backfills it.
+
+A pragma that returns a row — `wal_checkpoint`, `busy_timeout` — must be run
+with `rawQuery`, not `execute`: Android's `execSQL` rejects any statement that
+returns rows, while desktop `ffi` permits it, so this class of bug passes every
+unit test and only fails on a device.
 
 Files are written beside the database, derived from the open connection's path
 rather than the global `databaseFactory`, which is process-wide state anything
