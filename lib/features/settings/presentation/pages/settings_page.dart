@@ -448,20 +448,31 @@ class SettingsPage extends GetView<SettingsController> {
   };
 
   Future<void> _toggleDailyReminder(bool value) async {
-    final applied = await controller.setDailyReminder(value);
-    if (!applied) {
-      AppSnackbar.info(
-        'Allow notifications for Money Tracker in your device settings to use '
-        'reminders',
-      );
-      return;
+    final outcome = await controller.setDailyReminder(value);
+    final at = controller.dailyReminderTime.value.label;
+
+    switch (outcome) {
+      case ReminderOutcome.disabled:
+        AppSnackbar.info('Daily reminder turned off');
+      case ReminderOutcome.scheduledExactly:
+        AppSnackbar.success('Reminder set for $at every day');
+      case ReminderOutcome.scheduledInexactly:
+        // Honest about the limit rather than promising a minute the OS will
+        // not honour.
+        AppSnackbar.info(
+          'Reminder set for around $at every day. This device does not allow '
+          'exact alarms, so it may arrive a few minutes late.',
+        );
+      case ReminderOutcome.permissionDenied:
+        AppSnackbar.error(
+          'Money Tracker is not allowed to send notifications. Turn them on '
+          'in your device settings, then try again.',
+        );
+      case ReminderOutcome.scheduleFailed:
+        AppSnackbar.error(
+          'The reminder could not be scheduled on this device.',
+        );
     }
-    AppSnackbar.success(
-      value
-          ? 'Reminder set for ${controller.dailyReminderTime.value.label} '
-                'every day'
-          : 'Daily reminder turned off',
-    );
   }
 
   Future<void> _pickReminderTime(BuildContext context) async {

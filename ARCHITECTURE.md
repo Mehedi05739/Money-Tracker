@@ -393,10 +393,30 @@ reboot). Without them the Dart side looks correct and fails silently: the alarm
 registers and its receiver is even woken, but Android will not deliver to an
 undeclared component, so nothing is posted and no reply reaches the callback.
 
+#### Permission, and why the toggle used to stick
+
+Permission is *read* before it is *requested*. Asking again when it is already
+held is what jammed the settings toggle: the plugin refuses a second request
+while one is "in progress", and that flag is only cleared by the result
+callback, so a request that never resolved left every later attempt throwing —
+the switch flipped back for good until the app restarted. `ensurePermission`
+checks `areNotificationsEnabled()` first, and treats a thrown request as a
+reason to re-read the real state rather than as a refusal.
+
+The settings toggle also reports *which* step failed. A bare bool made a
+refused permission and a rejected schedule look identical, so the switch
+reverted with a message that could be simply untrue.
+
 #### The daily expense reminder
 
 A reminder at a time the user picks, defaulting to 10pm, repeating daily via
-`DateTimeComponents.time` so it survives without the app running. `ReminderTime`
+`DateTimeComponents.time` so it survives without the app running. It asks for
+an **exact** alarm where the OS allows one — inexact alarms are batched and
+deferred by Doze, which made the reminder arrive late or not at all — and falls
+back to inexact where Android withholds that, telling the user it may be a few
+minutes out rather than promising a minute it cannot keep. The manifest
+declares `SCHEDULE_EXACT_ALARM`, not `USE_EXACT_ALARM`: the latter is reserved
+for alarm-clock apps and would risk a Play Store rejection. `ReminderTime`
 owns the next-occurrence arithmetic — strictly in the future, since scheduling
 an instant that has already passed makes some Android versions fire it
 immediately — and is re-queued at every launch, unconditionally. The plugin can

@@ -79,3 +79,27 @@ class QuickAmount {
     return double.parse(value.toStringAsFixed(2));
   }
 }
+
+/// Why switching the daily reminder on succeeded or failed.
+///
+/// A bare bool made every failure look the same, so the toggle flipped back
+/// with a message that did not say which step went wrong — or, worse, said
+/// permission was refused when it had just been granted.
+enum ReminderOutcome {
+  /// Scheduled, and it will arrive at the minute asked for.
+  scheduledExactly,
+
+  /// Scheduled, but the OS withholds exact alarms, so it may arrive late.
+  scheduledInexactly,
+
+  /// The user has not allowed notifications.
+  permissionDenied,
+
+  /// Permission is held but the OS refused the schedule.
+  scheduleFailed,
+
+  /// Turned off.
+  disabled;
+
+  bool get isOn => this == scheduledExactly || this == scheduledInexactly;
+}

@@ -104,12 +104,45 @@ class NotificationService {
     }
   }
 
-  /// Asks for permission, returning whether it was granted.
+  /// Whether the OS currently lets this app post notifications.
   ///
-  /// Called when the user turns a reminder on, not at startup: a permission
-  /// prompt before the user has asked for anything is the fastest way to have
-  /// it refused.
-  Future<bool> requestPermission() async {
+  /// Read separately from requesting, because asking again once permission is
+  /// already held is what broke the settings toggle: the plugin refuses a
+  /// second request while one is "in progress" and that state is only cleared
+  /// by a result callback, so a request that never resolved left every later
+  /// attempt failing until the app restarted.
+  Future<bool> hasPermission() async {
+    if (!_ready) return false;
+    try {
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      if (android != null) {
+        return await android.areNotificationsEnabled() ?? false;
+      }
+      // iOS has no equivalent read, so treat initialisation as the signal and
+      // let the request itself be the check.
+      return true;
+    } catch (error) {
+      AppLogger.w(
+        'Could not read permission state: ${error.runtimeType}',
+        name: 'NOTIFY',
+      );
+      return false;
+    }
+  }
+
+  /// Makes sure notifications are permitted, asking only if they are not.
+  ///
+  /// If a request is rejected because one is already in flight, the permission
+  /// state is re-read rather than reported as a refusal — the user may well
+  /// have granted it, and telling them it failed when it did not is how the
+  /// toggle got stuck.
+  Future<bool> ensurePermission() async {
+    if (!_ready) return false;
+    if (await hasPermission()) return true;
+
     try {
       final android = _plugin
           .resolvePlatformSpecificImplementation<
@@ -117,7 +150,10 @@ class NotificationService {
           >();
       if (android != null) {
         final granted = await android.requestNotificationsPermission();
-        return granted ?? false;
+        if (granted ?? false) return true;
+        // A `false` here can also mean the dialog was dismissed by a rebuild
+        // rather than declined, so confirm against the real state.
+        return await hasPermission();
       }
 
       final ios = _plugin
@@ -125,8 +161,7 @@ class NotificationService {
             IOSFlutterLocalNotificationsPlugin
           >();
       if (ios != null) {
-        final granted = await ios.requestPermissions(alert: true, sound: true);
-        return granted ?? false;
+        return await ios.requestPermissions(alert: true, sound: true) ?? false;
       }
       return _ready;
     } catch (error) {
@@ -134,6 +169,23 @@ class NotificationService {
         'Permission request failed: ${error.runtimeType}',
         name: 'NOTIFY',
       );
+      // Most likely "another request is already in progress". The state itself
+      // is the truth.
+      return hasPermission();
+    }
+  }
+
+  /// Whether the OS will let this app post an alarm at an exact minute.
+  Future<bool> canScheduleExactly() async {
+    if (!_ready) return false;
+    try {
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      if (android == null) return true; // iOS schedules exactly.
+      return await android.canScheduleExactNotifications() ?? false;
+    } catch (_) {
       return false;
     }
   }
@@ -147,6 +199,8 @@ class NotificationService {
   /// second.
   Future<bool> scheduleDailyReminder(ReminderTime time) async {
     if (!_ready) return false;
+
+    final exact = await canScheduleExactly();
 
     try {
       await _plugin.zonedSchedule(
@@ -181,7 +235,15 @@ class NotificationService {
             categoryIdentifier: 'daily_reminder',
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        // Exact when the OS allows it, because a reminder set for 10pm that
+        // arrives at 10:40 is not the feature the user asked for. Inexact
+        // alarms are batched and deferred by Doze, which is why the reminder
+        // appeared minutes late or not at all. Falls back rather than failing:
+        // Android 14 withholds exact alarms from most apps, and a late
+        // reminder still beats none.
+        androidScheduleMode: exact
+            ? AndroidScheduleMode.exactAllowWhileIdle
+            : AndroidScheduleMode.inexactAllowWhileIdle,
         // The stored time is a wall clock, so it should mean 10pm wherever the
         // user is, not a fixed instant computed once.
         uiLocalNotificationDateInterpretation:

@@ -6,6 +6,13 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Lets the plugin re-queue the daily reminder after a restart. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- So a reminder set for 10pm arrives at 10pm. Inexact alarms are batched
+         and deferred by Doze, which made the daily reminder land late or not
+         at all. Not USE_EXACT_ALARM: that is reserved for alarm-clock apps and
+         would risk a Play Store rejection. The code checks
+         canScheduleExactNotifications() and falls back to an inexact alarm
+         where this is withheld. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:label="Money Tracker"

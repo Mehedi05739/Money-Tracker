@@ -257,7 +257,7 @@ class SettingsController extends GetxController {
       return true;
     }
 
-    final granted = await _notifications.requestPermission();
+    final granted = await _notifications.ensurePermission();
     if (!granted) {
       reminders[kind] = false;
       return false;
@@ -270,34 +270,33 @@ class SettingsController extends GetxController {
 
   /// Turns the daily reminder on or off.
   ///
-  /// Returns false when notification permission was refused, so the UI can say
-  /// the switch did not take rather than showing an "on" toggle that will never
-  /// fire.
-  Future<bool> setDailyReminder(bool enabled) async {
+  /// Reports which step decided the outcome rather than a bare success flag:
+  /// permission and scheduling fail for different reasons and the user can
+  /// only act on the difference.
+  Future<ReminderOutcome> setDailyReminder(bool enabled) async {
     if (!enabled) {
       dailyReminderEnabled.value = false;
       await _notifications.cancelDailyReminder();
       await _persist(SettingKeys.dailyReminderEnabled, 'false');
-      return true;
+      return ReminderOutcome.disabled;
     }
 
-    final granted = await _notifications.requestPermission();
-    if (!granted) {
+    if (!await _notifications.ensurePermission()) {
       dailyReminderEnabled.value = false;
-      return false;
+      return ReminderOutcome.permissionDenied;
     }
 
-    final scheduled = await _notifications.scheduleDailyReminder(
-      dailyReminderTime.value,
-    );
-    if (!scheduled) {
+    if (!await _notifications.scheduleDailyReminder(dailyReminderTime.value)) {
       dailyReminderEnabled.value = false;
-      return false;
+      return ReminderOutcome.scheduleFailed;
     }
 
     dailyReminderEnabled.value = true;
     await _persist(SettingKeys.dailyReminderEnabled, 'true');
-    return true;
+
+    return await _notifications.canScheduleExactly()
+        ? ReminderOutcome.scheduledExactly
+        : ReminderOutcome.scheduledInexactly;
   }
 
   /// Moves the reminder to a new time, re-scheduling if it is on.
