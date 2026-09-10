@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/daily_reminder.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/system_settings.dart';
+import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -18,18 +20,47 @@ import '../controllers/settings_controller.dart';
 import 'data_page.dart';
 import 'info_page.dart';
 
-class SettingsPage extends GetView<SettingsController> {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Read on build rather than at startup: whether the device can
-    // authenticate can change between launches — a user may enrol a
-    // fingerprint or remove their screen lock while the app is installed.
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => controller.refreshLockCapabilities(),
-    );
+  State<SettingsPage> createState() => _SettingsPageState();
+}
 
+class _SettingsPageState extends State<SettingsPage>
+    with WidgetsBindingObserver {
+  SettingsController get controller => Get.find<SettingsController>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Everything on this screen can be changed from *outside* the app — a
+  /// permission revoked, a notification channel switched off, a fingerprint
+  /// enrolled. Re-reading on resume is what makes the "fix this" buttons
+  /// actually feel fixed: the user leaves for system settings, changes the
+  /// switch, comes back, and the warning is gone.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refresh();
+  }
+
+  void _refresh() {
+    controller.refreshLockCapabilities();
+    controller.refreshNotificationStatus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ContentWidth(
@@ -151,6 +182,25 @@ class SettingsPage extends GetView<SettingsController> {
                         ? () => _pickReminderTime(context)
                         : null,
                   ),
+                ),
+                Obx(() {
+                  final status = controller.notificationStatus.value;
+                  // Only worth showing when something is actually wrong.
+                  if (status == null || status.isHealthy) {
+                    return const SizedBox.shrink();
+                  }
+                  return _ReminderProblem(
+                    status: status,
+                    onFix: () => _fixReminderProblem(status),
+                  );
+                }),
+                _Tile(
+                  icon: Icons.notifications_active_outlined,
+                  title: 'Send a test reminder',
+                  subtitle:
+                      'Posts one now. If it does not appear, the problem is '
+                      'this device’s settings, not the schedule.',
+                  onTap: _sendTestReminder,
                 ),
                 for (final kind in ReminderKind.values)
                   Obx(
@@ -475,6 +525,46 @@ class SettingsPage extends GetView<SettingsController> {
     }
   }
 
+  Future<void> _sendTestReminder() async {
+    final sent = await controller.sendTestReminder();
+    await controller.refreshNotificationStatus();
+    sent
+        ? AppSnackbar.info('Test reminder sent — check your notifications')
+        : AppSnackbar.error(
+            'This device refused to post it. Check that notifications are '
+            'allowed for Money Tracker.',
+          );
+  }
+
+  /// Sends the user to whichever screen fixes the problem they actually have.
+  ///
+  /// A blocked channel, a denied permission and a withheld exact-alarm grant
+  /// live on three different screens, and the card used to send every one of
+  /// them to the exact-alarm request — which does nothing at all when the real
+  /// problem is that notifications are switched off.
+  Future<void> _fixReminderProblem(NotificationDiagnostics status) async {
+    if (!status.canDeliver) {
+      // Only the user can re-enable a blocked channel. The card already spells
+      // out the path, so a build with no such screen leaves them able to do it
+      // by hand rather than stranded.
+      await SystemSettings.openNotificationSettings();
+      return;
+    }
+    if (!status.canScheduleExactly) {
+      await _requestExactAlarms();
+    }
+  }
+
+  Future<void> _requestExactAlarms() async {
+    final granted = await controller.upgradeToExactAlarms();
+    granted
+        ? AppSnackbar.success('Reminders will now arrive on time')
+        : AppSnackbar.info(
+            'Allow “Alarms & reminders” for Money Tracker in your device '
+            'settings to get reminders on the exact minute.',
+          );
+  }
+
   Future<void> _pickReminderTime(BuildContext context) async {
     final current = controller.dailyReminderTime.value;
     final picked = await showTimePicker(
@@ -631,6 +721,103 @@ class _Tile extends StatelessWidget {
                   Icons.chevron_right_rounded,
                   color: theme.colorScheme.onSurfaceVariant,
                 )),
+    );
+  }
+}
+
+/// Explains what is stopping reminders arriving properly, and offers the fix.
+///
+/// Named rather than generic: "notifications are not working" gives a user
+/// nothing to do, where "this device does not allow exact alarms" points at a
+/// specific switch in system settings.
+class _ReminderProblem extends StatelessWidget {
+  const _ReminderProblem({required this.status, required this.onFix});
+
+  final NotificationDiagnostics status;
+  final VoidCallback onFix;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    final (String message, String? action) = switch (status) {
+      NotificationDiagnostics(pluginReady: false) => (
+        'Notifications are unavailable on this device.',
+        null,
+      ),
+      NotificationDiagnostics(permissionGranted: false) => (
+        'Money Tracker is not allowed to send notifications.',
+        'Open notification settings',
+      ),
+      // Distinct from permission: dismissing a notification a few times makes
+      // Android offer to turn the channel off, and accepting silently swallows
+      // every reminder while permission still reads as granted.
+      NotificationDiagnostics(channelEnabled: false) => (
+        'Reminders are switched off for this app on this device, so none '
+            'will appear. Turn them back on in Settings › Apps › '
+            'Money Tracker › Notifications.',
+        'Open notification settings',
+      ),
+      NotificationDiagnostics(canScheduleExactly: false) => (
+        'This device does not allow exact alarms, so reminders may arrive a '
+            'few minutes late.',
+        'Allow exact alarms',
+      ),
+      NotificationDiagnostics(offsetMatchesDevice: false) => (
+        'The time zone could not be read, so reminders may drift when the '
+            'clocks change.',
+        null,
+      ),
+      _ => ('', null),
+    };
+
+    if (message.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, AppSpacing.sm),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              size: 20,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            AppSpacing.hGapMd,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (action != null) ...[
+                    AppSpacing.gapSm,
+                    TextButton(
+                      onPressed: onFix,
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(action),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

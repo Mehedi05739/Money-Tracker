@@ -59,27 +59,24 @@ class NotificationService {
   /// A fixed id so re-scheduling replaces the pending reminder rather than
   /// leaving yesterday's queued alongside today's.
   static const int dailyReminderId = 900;
+  static const String dailyChannelId = 'money_tracker_daily';
   static const String logExpenseActionId = 'log_expense';
   static const String amountInputKey = 'amount';
+
+  DidReceiveBackgroundNotificationResponseCallback? _onBackground;
+  DidReceiveNotificationResponseCallback? _onForeground;
 
   Future<void> init({
     DidReceiveBackgroundNotificationResponseCallback? onBackgroundResponse,
     DidReceiveNotificationResponseCallback? onForegroundResponse,
   }) async {
+    _onBackground = onBackgroundResponse ?? _onBackground;
+    _onForeground = onForegroundResponse ?? _onForeground;
+
     try {
       // Scheduling needs a real zone, or a "10pm" reminder fires at 10pm UTC.
       tz_data.initializeTimeZones();
-      try {
-        tz.setLocalLocation(
-          tz.getLocation(await FlutterTimezone.getLocalTimezone()),
-        );
-      } catch (error) {
-        // An unknown zone name should degrade to UTC, not stop notifications.
-        AppLogger.w(
-          'Falling back to UTC: ${error.runtimeType}',
-          name: 'NOTIFY',
-        );
-      }
+      await _resolveLocalTimeZone();
 
       final initialised = await _plugin.initialize(
         const InitializationSettings(
@@ -90,8 +87,8 @@ class NotificationService {
             requestSoundPermission: false,
           ),
         ),
-        onDidReceiveNotificationResponse: onForegroundResponse,
-        onDidReceiveBackgroundNotificationResponse: onBackgroundResponse,
+        onDidReceiveNotificationResponse: _onForeground,
+        onDidReceiveBackgroundNotificationResponse: _onBackground,
       );
       _ready = initialised ?? false;
     } catch (error) {
@@ -104,6 +101,55 @@ class NotificationService {
     }
   }
 
+  /// Resolves the device's zone, and checks the answer against the clock.
+  ///
+  /// A daily repeat matches the time-of-day *in this zone*, so getting it wrong
+  /// makes the reminder drift the moment daylight saving changes. When the
+  /// device reports a name the database does not carry, a zone with the same
+  /// current offset is used instead of silently leaving UTC.
+  Future<void> _resolveLocalTimeZone() async {
+    final deviceOffset = DateTime.now().timeZoneOffset;
+
+    try {
+      tz.setLocalLocation(
+        tz.getLocation(await FlutterTimezone.getLocalTimezone()),
+      );
+      if (_localOffset() == deviceOffset) return;
+      AppLogger.w(
+        'Zone ${tz.local.name} disagrees with the device clock',
+        name: 'NOTIFY',
+      );
+    } catch (error) {
+      AppLogger.w(
+        'Could not read the device time zone: ${error.runtimeType}',
+        name: 'NOTIFY',
+      );
+    }
+
+    // Fall back to any zone that currently matches the device's own offset:
+    // the reminder then fires at the right wall-clock time even though the
+    // zone is not named correctly.
+    for (final name in tz.timeZoneDatabase.locations.keys) {
+      final location = tz.getLocation(name);
+      if (tz.TZDateTime.now(location).timeZoneOffset == deviceOffset) {
+        tz.setLocalLocation(location);
+        AppLogger.w('Using $name as a stand-in zone', name: 'NOTIFY');
+        return;
+      }
+    }
+  }
+
+  Duration _localOffset() => tz.TZDateTime.now(tz.local).timeZoneOffset;
+
+  /// Makes sure the plugin is initialised, retrying once if an earlier attempt
+  /// failed. Without this a single bad start left every later call a silent
+  /// no-op — which looks exactly like a refused permission.
+  Future<bool> _ensureReady() async {
+    if (_ready) return true;
+    await init();
+    return _ready;
+  }
+
   /// Whether the OS currently lets this app post notifications.
   ///
   /// Read separately from requesting, because asking again once permission is
@@ -112,7 +158,7 @@ class NotificationService {
   /// by a result callback, so a request that never resolved left every later
   /// attempt failing until the app restarted.
   Future<bool> hasPermission() async {
-    if (!_ready) return false;
+    if (!await _ensureReady()) return false;
     try {
       final android = _plugin
           .resolvePlatformSpecificImplementation<
@@ -140,7 +186,7 @@ class NotificationService {
   /// have granted it, and telling them it failed when it did not is how the
   /// toggle got stuck.
   Future<bool> ensurePermission() async {
-    if (!_ready) return false;
+    if (!await _ensureReady()) return false;
     if (await hasPermission()) return true;
 
     try {
@@ -177,7 +223,7 @@ class NotificationService {
 
   /// Whether the OS will let this app post an alarm at an exact minute.
   Future<bool> canScheduleExactly() async {
-    if (!_ready) return false;
+    if (!await _ensureReady()) return false;
     try {
       final android = _plugin
           .resolvePlatformSpecificImplementation<
@@ -197,11 +243,33 @@ class NotificationService {
   /// `SCHEDULE_EXACT_ALARM`, which Android treats as a high-privilege
   /// permission, and a nudge to log expenses does not need to land on the
   /// second.
-  Future<bool> scheduleDailyReminder(ReminderTime time) async {
-    if (!_ready) return false;
+  Future<DeliveryPrecision> scheduleDailyReminder(ReminderTime time) async {
+    if (!await _ensureReady()) return DeliveryPrecision.none;
 
-    final exact = await canScheduleExactly();
+    // Try for an exact alarm, then settle for an approximate one. The
+    // capability check alone is not enough: Android 14 and later withhold
+    // exact alarms from apps targeting API 34+, and some builds report the
+    // capability as available and still reject the call. Falling back on the
+    // actual failure is what stops the whole reminder being unschedulable —
+    // which is how switching it on could fail on a device where notifications
+    // were perfectly well permitted.
+    if (await canScheduleExactly()) {
+      if (await _schedule(time, AndroidScheduleMode.exactAllowWhileIdle)) {
+        return DeliveryPrecision.exact;
+      }
+      AppLogger.w(
+        'Exact alarm refused despite being reported available',
+        name: 'NOTIFY',
+      );
+    }
 
+    if (await _schedule(time, AndroidScheduleMode.inexactAllowWhileIdle)) {
+      return DeliveryPrecision.approximate;
+    }
+    return DeliveryPrecision.none;
+  }
+
+  Future<bool> _schedule(ReminderTime time, AndroidScheduleMode mode) async {
     try {
       await _plugin.zonedSchedule(
         dailyReminderId,
@@ -209,28 +277,7 @@ class NotificationService {
         'Tap to add an expense, or reply with just the amount.',
         tz.TZDateTime.from(time.nextOccurrence(), tz.local),
         NotificationDetails(
-          android: AndroidNotificationDetails(
-            'money_tracker_daily',
-            'Daily reminder',
-            channelDescription: 'A daily nudge to record the day’s spending',
-            importance: Importance.defaultImportance,
-            priority: Priority.defaultPriority,
-            actions: const <AndroidNotificationAction>[
-              // Free-form input turns the notification itself into the fastest
-              // way to record a figure — no app launch, no form.
-              AndroidNotificationAction(
-                logExpenseActionId,
-                'Add expense',
-                allowGeneratedReplies: false,
-                inputs: <AndroidNotificationActionInput>[
-                  AndroidNotificationActionInput(label: 'Amount'),
-                ],
-                // The reply is handled without bringing the app forward.
-                showsUserInterface: false,
-                cancelNotification: true,
-              ),
-            ],
-          ),
+          android: _dailyAndroidDetails(),
           iOS: const DarwinNotificationDetails(
             categoryIdentifier: 'daily_reminder',
           ),
@@ -241,9 +288,7 @@ class NotificationService {
         // appeared minutes late or not at all. Falls back rather than failing:
         // Android 14 withholds exact alarms from most apps, and a late
         // reminder still beats none.
-        androidScheduleMode: exact
-            ? AndroidScheduleMode.exactAllowWhileIdle
-            : AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: mode,
         // The stored time is a wall clock, so it should mean 10pm wherever the
         // user is, not a fixed instant computed once.
         uiLocalNotificationDateInterpretation:
@@ -253,12 +298,134 @@ class NotificationService {
       return true;
     } catch (error) {
       AppLogger.w(
-        'Could not schedule the daily reminder: ${error.runtimeType}',
+        'Schedule refused (${mode.name}): ${error.runtimeType}',
         name: 'NOTIFY',
       );
       return false;
     }
   }
+
+  /// Asks the OS for permission to post alarms at an exact minute.
+  ///
+  /// Android 14 and later withhold this from apps targeting API 34+, so it has
+  /// to be requested. Opens the system screen; the user grants it there.
+  Future<bool> requestExactAlarms() async {
+    if (!await _ensureReady()) return false;
+    try {
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      if (android == null) return true;
+      await android.requestExactAlarmsPermission();
+      // The grant happens on a system screen, so re-read rather than trusting
+      // whatever the call returned.
+      return await canScheduleExactly();
+    } catch (error) {
+      AppLogger.w(
+        'Exact alarm request failed: ${error.runtimeType}',
+        name: 'NOTIFY',
+      );
+      return false;
+    }
+  }
+
+  /// Posts a notification immediately, exactly like the daily reminder.
+  ///
+  /// The fastest way to tell a scheduling problem from a delivery one: if this
+  /// does not appear, no reminder ever will, and the fault is permission, a
+  /// blocked channel or the manufacturer's battery manager — not the schedule.
+  Future<bool> sendTestReminder() async {
+    if (!await _ensureReady()) return false;
+    try {
+      await _plugin.show(
+        dailyReminderId,
+        'Test reminder',
+        'If you can see this, reminders work on this device.',
+        NotificationDetails(
+          android: _dailyAndroidDetails(),
+          iOS: const DarwinNotificationDetails(
+            categoryIdentifier: 'daily_reminder',
+          ),
+        ),
+      );
+      return true;
+    } catch (error) {
+      AppLogger.w('Test reminder failed: ${error.runtimeType}', name: 'NOTIFY');
+      return false;
+    }
+  }
+
+  /// Whether the reminder's own channel is switched on.
+  ///
+  /// App-level permission is not enough: a blocked channel swallows every
+  /// notification while `show()` still reports success.
+  Future<bool> isChannelEnabled() async {
+    if (!await _ensureReady()) return false;
+    try {
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      if (android == null) return true;
+
+      final channels = await android.getNotificationChannels();
+      // Before the channel has ever been created there is nothing to be
+      // blocked, so absence counts as fine.
+      final channel = channels
+          ?.where((c) => c.id == dailyChannelId)
+          .firstOrNull;
+      if (channel == null) return true;
+      return channel.importance != Importance.none;
+    } catch (error) {
+      AppLogger.w(
+        'Could not read channel state: ${error.runtimeType}',
+        name: 'NOTIFY',
+      );
+      return true;
+    }
+  }
+
+  /// Reads everything the OS currently permits, so the UI can name the problem.
+  Future<NotificationDiagnostics> diagnose() async {
+    if (!await _ensureReady()) {
+      return const NotificationDiagnostics.unavailable();
+    }
+    return NotificationDiagnostics(
+      pluginReady: true,
+      permissionGranted: await hasPermission(),
+      channelEnabled: await isChannelEnabled(),
+      canScheduleExactly: await canScheduleExactly(),
+      timeZone: tz.local.name,
+      offsetMatchesDevice: _localOffset() == DateTime.now().timeZoneOffset,
+    );
+  }
+
+  /// The reminder's Android details, shared by the schedule and the test so
+  /// the two cannot drift apart.
+  AndroidNotificationDetails _dailyAndroidDetails() =>
+      AndroidNotificationDetails(
+        dailyChannelId,
+        'Daily reminder',
+        channelDescription: 'A daily nudge to record the day’s spending',
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+        actions: const <AndroidNotificationAction>[
+          // Free-form input turns the notification itself into the fastest
+          // way to record a figure — no app launch, no form.
+          AndroidNotificationAction(
+            logExpenseActionId,
+            'Add expense',
+            allowGeneratedReplies: false,
+            inputs: <AndroidNotificationActionInput>[
+              AndroidNotificationActionInput(label: 'Amount'),
+            ],
+            // The reply is handled without bringing the app forward.
+            showsUserInterface: false,
+            cancelNotification: true,
+          ),
+        ],
+      );
 
   Future<void> cancelDailyReminder() async {
     if (!_ready) return;

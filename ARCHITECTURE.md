@@ -393,6 +393,33 @@ reboot). Without them the Dart side looks correct and fails silently: the alarm
 registers and its receiver is even woken, but Android will not deliver to an
 undeclared component, so nothing is posted and no reply reaches the callback.
 
+#### Three separate things can stop a reminder arriving
+
+They fail independently and look identical from inside the app, so
+`NotificationService.diagnose()` reads all of them and Settings names the one
+that is actually wrong:
+
+- **App permission.** `areNotificationsEnabled()`.
+- **The channel.** Android offers to "turn off notifications" whenever one is
+  dismissed a few times. Accepting blocks the *channel* while app-level
+  permission stays granted — and a blocked channel makes `show()` report
+  success while nothing appears, silently, forever. This is the one that looks
+  most like a bug in the app and is not.
+- **Exact alarms.** Android 14 and later withhold `SCHEDULE_EXACT_ALARM` from
+  apps targeting API 34+, so a reminder schedules successfully and then arrives
+  late, or not at all under Doze.
+
+None of the three can be fixed by the app; only the user can, in system
+settings. So the warning card carries both a deep link to the right screen and
+the path to type in by hand, because some manufacturer builds have no screen
+for the intent to reach. Settings re-reads on resume, so the warning clears
+when the user comes back from fixing it.
+
+"Send a test reminder" posts one immediately with the same details as the
+scheduled one. It separates a delivery problem from a scheduling problem in one
+tap, which is the difference between diagnosing a device you are holding and
+guessing about one you are not.
+
 #### Permission, and why the toggle used to stick
 
 Permission is *read* before it is *requested*. Asking again when it is already

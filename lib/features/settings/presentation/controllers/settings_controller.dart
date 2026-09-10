@@ -268,25 +268,42 @@ class SettingsController extends GetxController {
     return true;
   }
 
+  /// Live view of what the OS permits, refreshed whenever Settings is shown.
+  final Rxn<NotificationDiagnostics> notificationStatus =
+      Rxn<NotificationDiagnostics>();
+
+  Future<void> refreshNotificationStatus() async {
+    notificationStatus.value = await _notifications.diagnose();
+  }
+
   /// Turns the daily reminder on or off.
   ///
-  /// Reports which step decided the outcome rather than a bare success flag:
-  /// permission and scheduling fail for different reasons and the user can
-  /// only act on the difference.
+  /// Permission is the only thing that can stop it being switched on. How
+  /// precisely the OS will deliver it is reported separately: a device that
+  /// only allows approximate alarms should still get its reminder, and
+  /// refusing to enable the feature there — as this used to — leaves the user
+  /// with no way to turn on something that would have worked.
   Future<ReminderOutcome> setDailyReminder(bool enabled) async {
     if (!enabled) {
       dailyReminderEnabled.value = false;
       await _notifications.cancelDailyReminder();
       await _persist(SettingKeys.dailyReminderEnabled, 'false');
+      await refreshNotificationStatus();
       return ReminderOutcome.disabled;
     }
 
     if (!await _notifications.ensurePermission()) {
       dailyReminderEnabled.value = false;
+      await refreshNotificationStatus();
       return ReminderOutcome.permissionDenied;
     }
 
-    if (!await _notifications.scheduleDailyReminder(dailyReminderTime.value)) {
+    final precision = await _notifications.scheduleDailyReminder(
+      dailyReminderTime.value,
+    );
+    await refreshNotificationStatus();
+
+    if (precision == DeliveryPrecision.none) {
       dailyReminderEnabled.value = false;
       return ReminderOutcome.scheduleFailed;
     }
@@ -294,10 +311,28 @@ class SettingsController extends GetxController {
     dailyReminderEnabled.value = true;
     await _persist(SettingKeys.dailyReminderEnabled, 'true');
 
-    return await _notifications.canScheduleExactly()
+    return precision == DeliveryPrecision.exact
         ? ReminderOutcome.scheduledExactly
         : ReminderOutcome.scheduledInexactly;
   }
+
+  /// Asks for the "Alarms & reminders" permission and re-schedules with it.
+  ///
+  /// Android 14 and later withhold it from apps targeting API 34+, so a
+  /// reminder that was only approximate can be upgraded once the user grants
+  /// it — without this there is no route from "arrives late" to "arrives on
+  /// time" inside the app.
+  Future<bool> upgradeToExactAlarms() async {
+    final granted = await _notifications.requestExactAlarms();
+    if (granted && dailyReminderEnabled.value) {
+      await _notifications.scheduleDailyReminder(dailyReminderTime.value);
+    }
+    await refreshNotificationStatus();
+    return granted;
+  }
+
+  /// Posts a reminder immediately, to prove delivery works on this device.
+  Future<bool> sendTestReminder() => _notifications.sendTestReminder();
 
   /// Moves the reminder to a new time, re-scheduling if it is on.
   Future<void> setDailyReminderTime(ReminderTime time) async {

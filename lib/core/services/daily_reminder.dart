@@ -103,3 +103,71 @@ enum ReminderOutcome {
 
   bool get isOn => this == scheduledExactly || this == scheduledInexactly;
 }
+
+/// How precisely the OS will deliver a scheduled reminder.
+enum DeliveryPrecision {
+  /// Fires on the minute asked for.
+  exact,
+
+  /// Batched by the OS, so it may arrive minutes late.
+  approximate,
+
+  /// Could not be scheduled at all.
+  none,
+}
+
+/// What the operating system currently permits, read fresh from the device.
+///
+/// Every field is something a user can change outside the app, and each one
+/// independently stops reminders arriving. Reading them together is what lets
+/// Settings say *which* is wrong instead of "notifications are not working".
+class NotificationDiagnostics {
+  const NotificationDiagnostics({
+    required this.pluginReady,
+    required this.permissionGranted,
+    required this.channelEnabled,
+    required this.canScheduleExactly,
+    required this.timeZone,
+    required this.offsetMatchesDevice,
+  });
+
+  const NotificationDiagnostics.unavailable()
+    : pluginReady = false,
+      permissionGranted = false,
+      channelEnabled = false,
+      canScheduleExactly = false,
+      timeZone = 'unknown',
+      offsetMatchesDevice = false;
+
+  /// Whether the notification plugin initialised at all.
+  final bool pluginReady;
+
+  /// Whether the OS lets this app post notifications.
+  final bool permissionGranted;
+
+  /// Whether the reminder's own notification channel is switched on.
+  ///
+  /// Separate from [permissionGranted] because they fail independently and
+  /// look identical from inside the app: Android offers to "turn off
+  /// notifications" whenever one is dismissed a few times, and a user who
+  /// accepts blocks the channel while app-level permission stays granted.
+  /// Posting then reports success and nothing appears — silently, forever.
+  final bool channelEnabled;
+
+  /// Whether "Alarms & reminders" is allowed. Android 14 and later withhold
+  /// this by default from apps targeting API 34+, which is why a reminder can
+  /// be scheduled yet arrive late.
+  final bool canScheduleExactly;
+
+  final String timeZone;
+
+  /// Whether the resolved time zone agrees with the device clock's offset. If
+  /// it does not, a daily repeat drifts once daylight saving changes.
+  final bool offsetMatchesDevice;
+
+  /// Reminders can be delivered at all.
+  bool get canDeliver => pluginReady && permissionGranted && channelEnabled;
+
+  /// Everything is as good as it gets on this device.
+  bool get isHealthy => canDeliver && canScheduleExactly && offsetMatchesDevice;
+}
