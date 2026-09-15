@@ -316,10 +316,20 @@ class SettingsController extends GetxController {
 
     dailyReminderEnabled.value = true;
     await _persist(SettingKeys.dailyReminderEnabled, 'true');
+    // Write the time too, even when it is the default. Otherwise the stored
+    // settings say a reminder is on but not when, and it silently rides on
+    // whatever the default happens to be — so changing that default would move
+    // every existing user's reminder without them touching anything.
+    await _persistReminderTime(dailyReminderTime.value);
 
     return precision == DeliveryPrecision.exact
         ? ReminderOutcome.scheduledExactly
         : ReminderOutcome.scheduledInexactly;
+  }
+
+  Future<void> _persistReminderTime(ReminderTime time) async {
+    await _persist(SettingKeys.dailyReminderHour, '${time.hour}');
+    await _persist(SettingKeys.dailyReminderMinute, '${time.minute}');
   }
 
   /// Asks for the "Alarms & reminders" permission and re-schedules with it.
@@ -343,8 +353,7 @@ class SettingsController extends GetxController {
   /// Moves the reminder to a new time, re-scheduling if it is on.
   Future<void> setDailyReminderTime(ReminderTime time) async {
     dailyReminderTime.value = time;
-    await _persist(SettingKeys.dailyReminderHour, '${time.hour}');
-    await _persist(SettingKeys.dailyReminderMinute, '${time.minute}');
+    await _persistReminderTime(time);
 
     if (dailyReminderEnabled.value) {
       await _notifications.scheduleDailyReminder(time);

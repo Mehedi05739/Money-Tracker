@@ -393,6 +393,15 @@ reboot). Without them the Dart side looks correct and fails silently: the alarm
 registers and its receiver is even woken, but Android will not deliver to an
 undeclared component, so nothing is posted and no reply reaches the callback.
 
+#### Verified on Android 16
+
+The reminder path is exercised on an API 36 emulator as well as an older
+device, because the two behave differently in ways that matter and only the
+newer one matches what most users now run: `POST_NOTIFICATIONS` must be
+requested, and `SCHEDULE_EXACT_ALARM` is withheld by default from apps
+targeting API 34+. Testing only on an older release is what let both of those
+ship broken.
+
 #### Scheduling degrades in three tiers
 
 `scheduleDailyReminder` tries an exact repeating alarm, then an inexact
