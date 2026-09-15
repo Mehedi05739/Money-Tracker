@@ -506,6 +506,18 @@ with `rawQuery`, not `execute`: Android's `execSQL` rejects any statement that
 returns rows, while desktop `ffi` permits it, so this class of bug passes every
 unit test and only fails on a device.
 
+**A backup only survives a reinstall if it leaves the app.** Everything under
+`/data/user/0/<package>` is deleted when Android uninstalls the app, so a copy
+kept there disappears at exactly the moment it is needed. "Export to a file"
+therefore hands the document to the system picker — the user chooses Downloads,
+Drive, an SD card — and importing reads one back the same way. The Storage
+Access Framework needs no storage permission: the user grants access to a
+single document by picking it.
+
+The in-app copies are kept as a faster path for routine snapshots, labelled so
+the difference is unmissable: "Survives uninstalling the app" against "deleted
+if you uninstall it".
+
 Files are written beside the database, derived from the open connection's path
 rather than the global `databaseFactory`, which is process-wide state anything
 can reassign — a file written to one directory and looked for in another is a

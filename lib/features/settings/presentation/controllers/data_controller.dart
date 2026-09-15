@@ -2,6 +2,10 @@ import 'dart:io';
 
 import 'package:get/get.dart';
 
+import '../../../../core/services/document_store.dart';
+
+import 'package:flutter/services.dart';
+
 import '../../../../core/events/app_events.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/widgets/app_snackbar.dart';
@@ -52,6 +56,91 @@ class DataController extends GetxController {
 
   Future<List<File>> filesOfType({required bool backups}) =>
       _service.listFiles(backups: backups);
+
+  /// Exports to a file the user chooses, which is what survives uninstalling
+  /// the app. Returns false if they backed out.
+  Future<bool> exportToDevice() async {
+    if (isBusy.value) return false;
+    isBusy.value = true;
+    lastResult.value = null;
+    lastProblems.clear();
+
+    try {
+      final document = await _service.buildExportDocument(onProgress: _report);
+      final savedAs = await DocumentStore.save(
+        fileName: _service.suggestedExportName(),
+        content: document,
+      );
+      if (savedAs == null) return false; // cancelled
+
+      lastResult.value = DataTransferResult(path: savedAs, recordCount: 0);
+      AppSnackbar.success('Saved to $savedAs');
+      return true;
+    } on PlatformException catch (error) {
+      AppSnackbar.error(
+        error.code == DocumentStore.unavailable
+            ? 'This device has no file picker, so the export cannot be saved '
+                  'outside the app.'
+            : 'The file could not be saved.',
+      );
+      return false;
+    } catch (error) {
+      AppLogger.w('Export failed: ${error.runtimeType}', name: 'DATA');
+      AppSnackbar.error('That did not work. Your data is unchanged.');
+      return false;
+    } finally {
+      isBusy.value = false;
+      progress.value = null;
+    }
+  }
+
+  /// Reads a file the user picks and validates it, without writing anything.
+  Future<({ImportPayload payload, String content})?> pickImportFile() async {
+    lastProblems.clear();
+    lastResult.value = null;
+
+    try {
+      final content = await DocumentStore.pick();
+      if (content == null) return null; // cancelled
+      return (payload: _service.inspectContent(content), content: content);
+    } on ImportValidationException catch (error) {
+      lastProblems.assignAll(error.problems);
+      AppSnackbar.error(error.summary);
+      return null;
+    } on PlatformException catch (error) {
+      AppSnackbar.error(
+        error.code == DocumentStore.unavailable
+            ? 'This device has no file picker.'
+            : 'That file could not be read.',
+      );
+      return null;
+    } catch (error) {
+      AppLogger.w('Could not read file: ${error.runtimeType}', name: 'DATA');
+      AppSnackbar.error('That file could not be read');
+      return null;
+    }
+  }
+
+  /// Loads a document the user picked.
+  Future<void> importDocument(
+    ImportPayload payload, {
+    required String name,
+    required ImportMode mode,
+  }) => _run(
+    action: () => _service.importPayload(
+      payload,
+      label: name,
+      mode: mode,
+      onProgress: _report,
+    ),
+    describe: (result) => result.replaced
+        ? 'Replaced everything with ${result.added} records'
+        : result.reused > 0
+        ? 'Added ${result.added} records, matched ${result.reused} you '
+              'already had'
+        : 'Added ${result.added} records',
+    invalidatesEverything: true,
+  );
 
   Future<void> exportData() => _run(
     action: () => _service.exportToJson(onProgress: _report),

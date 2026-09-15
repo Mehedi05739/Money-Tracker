@@ -96,13 +96,25 @@ class DataTransferService {
 
   // ----------------------------------------------------------------- Export
 
-  /// Writes the user's financial data and preferences to a JSON file.
-  Future<DataTransferResult> exportToJson({
+  /// Builds the export document without writing it anywhere.
+  ///
+  /// Separate from writing so the same content can be handed straight to the
+  /// system file picker — the only way a backup survives the app being
+  /// uninstalled, since everything under the app's own storage is deleted with
+  /// it.
+  Future<String> buildExportDocument({ProgressCallback? onProgress}) async =>
+      const JsonEncoder.withIndent('  ')
+          .convert(await _buildExportPayload(onProgress: onProgress));
+
+  /// A filename that sorts by date and says what it is.
+  String suggestedExportName() =>
+      'money-tracker-${_stamp().split('T').first}.json';
+
+  Future<Map<String, Object?>> _buildExportPayload({
     ProgressCallback? onProgress,
   }) async {
     final db = _database.db;
     final data = <String, Object?>{};
-    var records = 0;
 
     final total = ExportSchema.groups.length + 1;
     for (var i = 0; i < ExportSchema.groups.length; i++) {
@@ -115,9 +127,7 @@ class DataTransferService {
         ),
       );
 
-      final rows = await db.query(group.table);
-      data[group.key] = rows;
-      records += rows.length;
+      data[group.key] = await db.query(group.table);
     }
 
     onProgress?.call(
@@ -141,16 +151,32 @@ class DataTransferService {
       ExportSchema.settingsKey: settings,
     };
 
+    onProgress?.call(
+      TransferProgress(label: 'Done', completed: total, total: total),
+    );
+    return payload;
+  }
+
+  /// Writes the export into the app's own storage.
+  ///
+  /// Kept as a quick in-app copy. It does **not** survive uninstall — for that
+  /// the document has to go somewhere the user chose.
+  Future<DataTransferResult> exportToJson({
+    ProgressCallback? onProgress,
+  }) async {
+    final payload = await _buildExportPayload(onProgress: onProgress);
+    final data = payload[ExportSchema.dataKey]! as Map<String, Object?>;
+    final records = ExportSchema.groups.fold<int>(
+      0,
+      (sum, group) => sum + (data[group.key]! as List).length,
+    );
+
     final dir = await _storageDir();
     final file = File(
       p.join(dir.path, 'money-tracker-export-${_stamp()}.json'),
     );
     await file.writeAsString(
       const JsonEncoder.withIndent('  ').convert(payload),
-    );
-
-    onProgress?.call(
-      TransferProgress(label: 'Done', completed: total, total: total),
     );
     return DataTransferResult(path: file.path, recordCount: records);
   }
@@ -170,6 +196,22 @@ class DataTransferService {
   ///
   /// Separate from [importFromJson] so the UI can tell the user what a file
   /// contains, and refuse a bad one, before asking them to confirm.
+  /// Validates a document the user handed us, with no file involved.
+  ///
+  /// The picker returns the file's *contents*, not a path this app may read
+  /// again later, so validation has to work on the text itself.
+  ImportPayload inspectContent(String content) {
+    Object? decoded;
+    try {
+      decoded = jsonDecode(content);
+    } on FormatException {
+      throw const ImportValidationException([
+        ImportProblem(message: 'That file is not readable JSON'),
+      ]);
+    }
+    return ImportValidator.parse(decoded);
+  }
+
   Future<ImportPayload> inspect(String path) async {
     final file = File(path);
     if (!file.existsSync()) {
@@ -178,16 +220,7 @@ class DataTransferService {
       ]);
     }
 
-    Object? decoded;
-    try {
-      decoded = jsonDecode(await file.readAsString());
-    } on FormatException {
-      throw const ImportValidationException([
-        ImportProblem(message: 'That file is not readable JSON'),
-      ]);
-    }
-
-    return ImportValidator.parse(decoded);
+    return inspectContent(await file.readAsString());
   }
 
   /// Loads a validated file into the database.
@@ -199,9 +232,20 @@ class DataTransferService {
     String path, {
     ImportMode mode = ImportMode.merge,
     ProgressCallback? onProgress,
-  }) async {
-    final payload = await inspect(path);
+  }) async => importPayload(
+    await inspect(path),
+    label: path,
+    mode: mode,
+    onProgress: onProgress,
+  );
 
+  /// Loads an already-validated document.
+  Future<DataTransferResult> importPayload(
+    ImportPayload payload, {
+    required String label,
+    ImportMode mode = ImportMode.merge,
+    ProgressCallback? onProgress,
+  }) async {
     var added = 0;
     var reused = 0;
 
@@ -311,7 +355,7 @@ class DataTransferService {
     );
 
     return DataTransferResult(
-      path: path,
+      path: label,
       recordCount: payload.recordCount,
       added: added,
       reused: reused,

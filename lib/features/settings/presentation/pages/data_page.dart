@@ -41,8 +41,9 @@ class DataPage extends GetView<DataController> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: Text(
-                  'Files are written to this app’s own storage on this device. '
-                  'Nothing is uploaded or shared.',
+                  'Nothing here is uploaded anywhere. A file you export goes '
+                  'wherever you choose to save it; the quick copies stay '
+                  'inside the app.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -65,7 +66,35 @@ class DataPage extends GetView<DataController> {
                   child: _ResultCard(result: result),
                 ),
 
-              const SectionHeader(title: 'Export'),
+              const SectionHeader(
+                title: 'Save a copy you keep',
+                subtitle: 'Survives uninstalling the app',
+              ),
+              _ActionCard(
+                icon: Icons.save_alt_rounded,
+                title: 'Export to a file',
+                subtitle:
+                    'Choose where to save it — Downloads, Drive, anywhere. '
+                    'This copy is yours and is not deleted with the app.',
+                busy: controller.isBusy.value,
+                onTap: controller.exportToDevice,
+              ),
+              _ActionCard(
+                icon: Icons.drive_folder_upload_outlined,
+                title: 'Import from a file',
+                subtitle:
+                    'Pick a file you exported earlier to bring everything '
+                    'back, on this device or a new one',
+                busy: controller.isBusy.value,
+                onTap: () => _pickAndImportDocument(context),
+              ),
+
+              const SectionHeader(
+                title: 'Quick copies',
+                subtitle:
+                    'Kept inside the app — fast, but deleted if you '
+                    'uninstall it',
+              ),
               _ActionCard(
                 icon: Icons.description_outlined,
                 title: 'Export data',
@@ -123,6 +152,33 @@ class DataPage extends GetView<DataController> {
     );
   }
 
+  /// Imports a file the user picks from anywhere on the device.
+  Future<void> _pickAndImportDocument(BuildContext context) async {
+    final picked = await controller.pickImportFile();
+    if (picked == null || !context.mounted) return;
+
+    final mode = await _chooseImportMode(context, null, picked.payload);
+    if (mode == null || !context.mounted) return;
+
+    if (mode == ImportMode.replace) {
+      final confirmed = await DangerDialog.show(
+        title: 'Replace all data?',
+        message:
+            'Everything currently in the app is deleted and replaced with the '
+            'contents of the file you picked.',
+        confirmWord: 'REPLACE',
+        confirmLabel: 'Replace everything',
+      );
+      if (!confirmed) return;
+    }
+
+    await controller.importDocument(
+      picked.payload,
+      name: 'the file you picked',
+      mode: mode,
+    );
+  }
+
   Future<void> _pickAndImport(BuildContext context) async {
     final file = await _pickFile(
       context,
@@ -164,7 +220,7 @@ class DataPage extends GetView<DataController> {
   /// have, so replacing has to be something the user picks deliberately.
   Future<ImportMode?> _chooseImportMode(
     BuildContext context,
-    File file,
+    File? file,
     ImportPayload payload,
   ) {
     final theme = Theme.of(context);
