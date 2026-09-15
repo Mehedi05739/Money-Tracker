@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
@@ -253,6 +254,8 @@ class NotificationService {
     // actual failure is what stops the whole reminder being unschedulable —
     // which is how switching it on could fail on a device where notifications
     // were perfectly well permitted.
+    lastScheduleError = null;
+
     if (await canScheduleExactly()) {
       if (await _schedule(time, AndroidScheduleMode.exactAllowWhileIdle)) {
         return DeliveryPrecision.exact;
@@ -266,10 +269,33 @@ class NotificationService {
     if (await _schedule(time, AndroidScheduleMode.inexactAllowWhileIdle)) {
       return DeliveryPrecision.approximate;
     }
+
+    // Last resort: a one-shot for the next occurrence instead of a repeating
+    // schedule. Some builds reject the daily-repeat variant outright, and a
+    // reminder that has to be re-armed is still a working reminder — the app
+    // re-arms on every launch anyway, which is what makes this viable rather
+    // than a reminder that fires once and is never seen again.
+    if (await _schedule(
+      time,
+      AndroidScheduleMode.inexactAllowWhileIdle,
+      repeating: false,
+    )) {
+      return DeliveryPrecision.approximate;
+    }
     return DeliveryPrecision.none;
   }
 
-  Future<bool> _schedule(ReminderTime time, AndroidScheduleMode mode) async {
+  /// Why the last scheduling attempt failed, in the platform's own words.
+  ///
+  /// Kept so the UI can show something a user can act on or quote, rather than
+  /// "could not be scheduled" — which is true and useless.
+  String? lastScheduleError;
+
+  Future<bool> _schedule(
+    ReminderTime time,
+    AndroidScheduleMode mode, {
+    bool repeating = true,
+  }) async {
     try {
       await _plugin.zonedSchedule(
         dailyReminderId,
@@ -293,10 +319,21 @@ class NotificationService {
         // user is, not a fixed instant computed once.
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.wallClockTime,
-        matchDateTimeComponents: DateTimeComponents.time,
+        matchDateTimeComponents: repeating ? DateTimeComponents.time : null,
       );
       return true;
+    } on PlatformException catch (error) {
+      // The platform's code and message name the real cause — an exact-alarm
+      // denial, an unresolvable time zone, a rejected repeat — where the
+      // runtime type alone says nothing.
+      lastScheduleError = '${error.code}: ${error.message}';
+      AppLogger.w(
+        'Schedule refused (${mode.name}): ${error.code}',
+        name: 'NOTIFY',
+      );
+      return false;
     } catch (error) {
+      lastScheduleError = error.toString();
       AppLogger.w(
         'Schedule refused (${mode.name}): ${error.runtimeType}',
         name: 'NOTIFY',

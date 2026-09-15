@@ -519,8 +519,13 @@ class _SettingsPageState extends State<SettingsPage>
           'in your device settings, then try again.',
         );
       case ReminderOutcome.scheduleFailed:
+        // Carry the platform's own words: on a device the developer cannot
+        // hold, the error code is the only thing that identifies the cause.
+        final reason = controller.lastScheduleError;
         AppSnackbar.error(
-          'The reminder could not be scheduled on this device.',
+          reason == null
+              ? 'The reminder could not be scheduled on this device.'
+              : 'The reminder could not be scheduled: $reason',
         );
     }
   }

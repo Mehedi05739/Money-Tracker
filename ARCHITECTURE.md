@@ -393,6 +393,17 @@ reboot). Without them the Dart side looks correct and fails silently: the alarm
 registers and its receiver is even woken, but Android will not deliver to an
 undeclared component, so nothing is posted and no reply reaches the callback.
 
+#### Scheduling degrades in three tiers
+
+`scheduleDailyReminder` tries an exact repeating alarm, then an inexact
+repeating one, then a one-shot for the next occurrence. The last tier exists
+because some builds reject the daily-repeat variant outright; a reminder that
+has to be re-armed is still a working reminder, and `ensureDailyReminderScheduled`
+already re-arms on every launch. Only if all three fail does the feature report
+that it could not be scheduled — and it then quotes the platform's own error
+code, because on a device the developer cannot hold, that code is the only
+thing that identifies the cause.
+
 #### Three separate things can stop a reminder arriving
 
 They fail independently and look identical from inside the app, so

@@ -272,6 +272,10 @@ class SettingsController extends GetxController {
   final Rxn<NotificationDiagnostics> notificationStatus =
       Rxn<NotificationDiagnostics>();
 
+  /// The platform's own reason for the last failed schedule, for the UI to
+  /// show. "Could not be scheduled" is true and useless on its own.
+  String? lastScheduleError;
+
   Future<void> refreshNotificationStatus() async {
     notificationStatus.value = await _notifications.diagnose();
   }
@@ -305,8 +309,10 @@ class SettingsController extends GetxController {
 
     if (precision == DeliveryPrecision.none) {
       dailyReminderEnabled.value = false;
+      lastScheduleError = _notifications.lastScheduleError;
       return ReminderOutcome.scheduleFailed;
     }
+    lastScheduleError = null;
 
     dailyReminderEnabled.value = true;
     await _persist(SettingKeys.dailyReminderEnabled, 'true');
