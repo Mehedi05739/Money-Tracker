@@ -393,6 +393,32 @@ reboot). Without them the Dart side looks correct and fails silently: the alarm
 registers and its receiver is even woken, but Android will not deliver to an
 undeclared component, so nothing is posted and no reply reaches the callback.
 
+#### Release builds need ProGuard rules
+
+R8 minifies release builds and strips whatever it cannot see being used, which
+includes the reflection metadata Gson depends on.
+`flutter_local_notifications` persists a scheduled notification as JSON and
+reads it back when the alarm fires, so without `-keepattributes Signature` the
+receiver threw `Missing type parameter.` and the process died — the reminder
+worked perfectly in debug and killed itself in release, days after install.
+`android/app/proguard-rules.pro` keeps what Gson, the plugin and the biometric
+prompt need.
+
+This is why the release APK is worth testing directly: a debug build never runs
+R8, so nothing in the ordinary development loop can catch it.
+
+#### The app does not need to be running
+
+The alarm belongs to the OS, not the app. When it fires, Android starts the
+process to deliver the broadcast — verified from a killed app, where logcat
+shows `Start proc ... for broadcast {ScheduledNotificationReceiver}` at the
+scheduled second.
+
+The exception is a **force-stop** (the button in system settings, or a
+manufacturer's "cleaner" doing the equivalent). Android cancels a
+force-stopped app's alarms and delivers it no broadcasts until the user opens
+it again, which is why `ensureDailyReminderScheduled` re-arms on every launch.
+
 #### Verified on Android 16
 
 The reminder path is exercised on an API 36 emulator as well as an older

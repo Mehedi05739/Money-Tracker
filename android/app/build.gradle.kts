@@ -37,6 +37,17 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+
+            // Release builds are minified by R8, which strips the reflection
+            // metadata Gson needs. See proguard-rules.pro — without it a
+            // scheduled reminder crashes its broadcast receiver, so the feature
+            // works in debug and silently dies in release.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
