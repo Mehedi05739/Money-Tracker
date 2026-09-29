@@ -407,6 +407,14 @@ prompt need.
 This is why the release APK is worth testing directly: a debug build never runs
 R8, so nothing in the ordinary development loop can catch it.
 
+Settings carries two checks for the same reason. "Send a test reminder" posts
+immediately and proves only that a notification can be *delivered*. "Test the
+scheduled reminder" schedules one a minute out through the real alarm path —
+the alarm, the broadcast receiver, rebuilding the notification from what was
+persisted — which is the part that breaks under R8 and cannot fail in debug.
+The first check would have passed happily while release was broken; the second
+is the one that catches it.
+
 #### The app does not need to be running
 
 The alarm belongs to the OS, not the app. When it fires, Android starts the

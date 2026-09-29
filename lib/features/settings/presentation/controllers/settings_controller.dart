@@ -350,6 +350,10 @@ class SettingsController extends GetxController {
   /// Posts a reminder immediately, to prove delivery works on this device.
   Future<bool> sendTestReminder() => _notifications.sendTestReminder();
 
+  /// Schedules a test a minute out, exercising the alarm and receiver rather
+  /// than just posting a notification.
+  Future<bool> scheduleTestReminder() => _notifications.scheduleTestReminder();
+
   /// Moves the reminder to a new time, re-scheduling if it is on.
   Future<void> setDailyReminderTime(ReminderTime time) async {
     dailyReminderTime.value = time;

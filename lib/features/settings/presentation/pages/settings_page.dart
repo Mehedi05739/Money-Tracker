@@ -202,6 +202,15 @@ class _SettingsPageState extends State<SettingsPage>
                       'this device’s settings, not the schedule.',
                   onTap: _sendTestReminder,
                 ),
+                _Tile(
+                  icon: Icons.alarm_outlined,
+                  title: 'Test the scheduled reminder',
+                  subtitle:
+                      'Schedules one a minute from now, using the same alarm '
+                      'the daily reminder uses. Close the app and wait — if it '
+                      'arrives, scheduling works on this device.',
+                  onTap: _scheduleTestReminder,
+                ),
                 for (final kind in ReminderKind.values)
                   Obx(
                     () => SwitchListTile.adaptive(
@@ -558,6 +567,22 @@ class _SettingsPageState extends State<SettingsPage>
     if (!status.canScheduleExactly) {
       await _requestExactAlarms();
     }
+  }
+
+  Future<void> _scheduleTestReminder() async {
+    final scheduled = await controller.scheduleTestReminder();
+    if (!scheduled) {
+      final reason = controller.lastScheduleError;
+      AppSnackbar.error(
+        reason == null
+            ? 'The test could not be scheduled on this device.'
+            : 'The test could not be scheduled: $reason',
+      );
+      return;
+    }
+    AppSnackbar.success(
+      'Scheduled for one minute from now — you can close the app',
+    );
   }
 
   Future<void> _requestExactAlarms() async {

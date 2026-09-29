@@ -61,6 +61,9 @@ class NotificationService {
   /// leaving yesterday's queued alongside today's.
   static const int dailyReminderId = 900;
   static const String dailyChannelId = 'money_tracker_daily';
+
+  /// Its own id so a test never replaces or cancels the real reminder.
+  static const int testReminderId = 902;
   static const String logExpenseActionId = 'log_expense';
   static const String amountInputKey = 'amount';
 
@@ -420,6 +423,54 @@ class NotificationService {
         name: 'NOTIFY',
       );
       return true;
+    }
+  }
+
+  /// Schedules a one-off reminder a minute from now, through the same alarm
+  /// path the real one uses.
+  ///
+  /// [sendTestReminder] posts immediately and so only proves the notification
+  /// can be *delivered*. It cannot catch a fault in the *scheduled* path — the
+  /// alarm, the broadcast receiver, rebuilding the notification from what was
+  /// persisted — which is exactly where a release build breaks and a debug
+  /// build does not. This is the check that would have caught that.
+  Future<bool> scheduleTestReminder() async {
+    if (!await _ensureReady()) return false;
+
+    final at = tz.TZDateTime.from(
+      DateTime.now().add(const Duration(minutes: 1)),
+      tz.local,
+    );
+    final exact = await canScheduleExactly();
+
+    try {
+      await _plugin.zonedSchedule(
+        testReminderId,
+        'Scheduled test reminder',
+        'The alarm fired and rebuilt this notification. Scheduling works.',
+        at,
+        NotificationDetails(
+          android: _dailyAndroidDetails(),
+          iOS: const DarwinNotificationDetails(
+            categoryIdentifier: 'daily_reminder',
+          ),
+        ),
+        androidScheduleMode: exact
+            ? AndroidScheduleMode.exactAllowWhileIdle
+            : AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.wallClockTime,
+      );
+      return true;
+    } catch (error) {
+      lastScheduleError = error is PlatformException
+          ? '${error.code}: ${error.message}'
+          : error.toString();
+      AppLogger.w(
+        'Test schedule refused: ${error.runtimeType}',
+        name: 'NOTIFY',
+      );
+      return false;
     }
   }
 
